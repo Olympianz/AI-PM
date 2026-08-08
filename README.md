@@ -18,3 +18,10 @@
 5. 每日打卡：`python3 scripts/checkin.py --date <日期> --minutes <分钟> --task <任务id>`
 6. 周报：`python3 scripts/report.py --end <本周日> --out data/reports/weekly-<日期>.md`
 7. 新 JD：写入 `data/jds/raw/` 与 `data/jds/*.json` 后执行 `python3 scripts/import_jd.py --jd <文件> --model data/capability_model.json --apply`
+
+## 主题学习（专题）
+
+- 针对个人短板建专题（当前内置：用户体验设计与用户研究、A/B 测试与实验设计，可扩展 `data/content/topics.json`）。
+- 每个专题包含：目标、学习模块（可勾选进度）、自测题、输出任务、推荐资源。
+- AI 助手（DeepSeek，`api/ai.py` 代理，`DEEPSEEK_API_KEY` 只存在 Vercel 环境变量）：一键生成 4 周学习计划、出 5 道自测题、总结进度、自由提问。
+- 专题进度随云同步（`ai_pm_topic_progress` 表）跨设备保存。
