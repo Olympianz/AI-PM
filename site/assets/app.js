@@ -29,6 +29,88 @@
     URL.revokeObjectURL(a.href);
   }
 
+  function cloudPush() {
+    var state = load();
+    var payload = {
+      checkins: (state.checkins || []).map(function (d) {
+        return { date: d, task_ids: [], minutes: 60 };
+      }),
+      quiz_answers: state.quiz_answers || [],
+      artifacts: (state.artifacts || []).map(function (a) {
+        return { id: String(a.id), type: a.type, title: a.title,
+                 content: a.content, updated_at: a.updated_at };
+      }),
+      mocks: (state.mocks || []).map(function (m) {
+        return { id: m.question_id + "-" + m.date, date: m.date, section: m.section,
+                 question_id: m.question_id, score: m.score, covered: m.covered,
+                 total: m.total };
+      })
+    };
+    return fetch("./api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function cloudPull() {
+    return fetch("./api/sync")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var state = load();
+        state.checkins = state.checkins || [];
+        state.quiz_answers = state.quiz_answers || [];
+        state.artifacts = state.artifacts || [];
+        state.mocks = state.mocks || [];
+        (data.checkins || []).forEach(function (c) {
+          if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
+        });
+        var quizKeys = {};
+        state.quiz_answers.forEach(function (a) { quizKeys[a.date + "|" + a.quiz_id] = 1; });
+        (data.quiz_answers || []).forEach(function (a) {
+          var k = a.date + "|" + a.quiz_id;
+          if (!quizKeys[k]) { state.quiz_answers.push(a); quizKeys[k] = 1; }
+        });
+        var artKeys = {};
+        state.artifacts.forEach(function (a) { artKeys[String(a.id)] = 1; });
+        (data.artifacts || []).forEach(function (a) {
+          if (!artKeys[String(a.id)]) { state.artifacts.push(a); artKeys[String(a.id)] = 1; }
+        });
+        var mockKeys = {};
+        state.mocks.forEach(function (m) { mockKeys[m.question_id + "|" + m.date] = 1; });
+        (data.mocks || []).forEach(function (m) {
+          var k = m.question_id + "|" + m.date;
+          if (!mockKeys[k]) { state.mocks.push(m); mockKeys[k] = 1; }
+        });
+        save(state);
+        return state;
+      });
+  }
+
+  function renderCloudSync() {
+    var btn = document.getElementById("cloud-sync");
+    if (!btn) { return; }
+    btn.onclick = function () {
+      btn.disabled = true;
+      btn.textContent = "同步中…";
+      cloudPush().then(function (r) {
+        var saved = (r && r.saved) || {};
+        btn.textContent = "已同步 ✓";
+        setTimeout(function () {
+          btn.textContent = "☁ 云端同步";
+          btn.disabled = false;
+        }, 2000);
+        alert("已保存到云端：" +
+          "打卡 " + (saved.checkins || 0) + "、答题 " + (saved.quiz_answers || 0) +
+          "、输出物 " + (saved.artifacts || 0) + "、面试 " + (saved.mocks || 0));
+      }).catch(function () {
+        btn.textContent = "同步失败";
+        btn.disabled = false;
+        setTimeout(function () { btn.textContent = "☁ 云端同步"; }, 2000);
+      });
+    };
+  }
+
   function renderCheckin() {
     var btn = document.getElementById("checkin-btn");
     if (!btn) { return; }
@@ -601,4 +683,6 @@
   renderProject();
   renderMock();
   renderReview();
+  renderCloudSync();
+  cloudPull().catch(function () { /* 本地环境无 API，静默 */ });
 })();

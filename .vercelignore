@@ -1,0 +1,13 @@
+.superpowers/
+data/
+docs/
+src/
+scripts/
+tests/
+node_modules/
+__pycache__/
+*.pyc
+.git/
+README.md
+AGENTS.md
+pytest.ini

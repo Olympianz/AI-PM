@@ -202,7 +202,10 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         "</div>"
         '<div class="card"><h2>数据同步</h2>'
         '<p class="muted" style="font-size:12px">答题与打卡保存在本机；导出文件后可合并回本地跟踪。</p>'
-        '<p style="margin-top:10px"><button id="export-sync" class="btn ghost">导出同步文件</button></p></div>'
+        '<div class="btn-row">'
+        '<button id="cloud-sync" class="btn">☁ 云端同步</button>'
+        '<button id="export-sync" class="btn ghost">导出文件</button>'
+        "</div></div>"
         '<footer class="hint">AI-PM · 通勤学习助手</footer>'
     )
     index_js = f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
