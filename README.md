@@ -9,11 +9,12 @@
 
 ## 部署与使用
 
-1. 生成站点：`python3 scripts/build_site.py --data data --out site`
-2. 本地预览：`python3 -m http.server 8765 --directory site`
-3. 手机访问（通勤）：将 `site/` 部署到 GitHub Pages 或 Vercel（静态托管），手机浏览器打开 HTTPS 地址，可添加到主屏作为 PWA 使用。
-4. 离线：首次打开后 service worker 会缓存页面，弱网/离线仍可阅读当日知识卡。
-5. 同步：手机端答题与打卡保存在浏览器 localStorage；点击「导出同步文件」生成 `ai-pm-sync.json`，用 `python3 scripts/sync_import.py --file <文件> --tracking data/tracking` 合并到本地跟踪。
-6. 每日打卡：`python3 scripts/checkin.py --date <日期> --minutes <分钟> --task <任务id>`
-7. 周报：`python3 scripts/report.py --end <本周日> --out data/reports/weekly-<日期>.md`
-8. 新 JD：写入 `data/jds/raw/` 与 `data/jds/*.json` 后执行 `python3 scripts/import_jd.py --jd <文件> --model data/capability_model.json --apply`
+**线上地址**：https://ai-pm-learn.vercel.app （Vercel 部署，Supabase 云同步）
+
+1. 本地生成站点：`python3 scripts/build_site.py --data data --out site`；本地预览 `python3 -m http.server 8765 --directory site`
+2. 线上部署：根目录配置了 `vercel.json`（`/` 路由到 `site/`，`/api/*` 走 serverless）与 `api/sync.py`（Supabase 云同步）。`vercel deploy --prod --yes` 即可发布。
+3. 云端数据：`ai_pm_checkins / ai_pm_quiz_answers / ai_pm_artifacts / ai_pm_mocks` 四张表，由 `api/sync.py` 用 service role key 读写（密钥只在服务端环境变量中）。
+4. 前端同步：打开首页点击「☁ 云端同步」上传本机数据；每次加载自动从云端拉取合并（在线时）。离线场景仍可用「导出文件」+ `scripts/sync_import.py` 回传。
+5. 每日打卡：`python3 scripts/checkin.py --date <日期> --minutes <分钟> --task <任务id>`
+6. 周报：`python3 scripts/report.py --end <本周日> --out data/reports/weekly-<日期>.md`
+7. 新 JD：写入 `data/jds/raw/` 与 `data/jds/*.json` 后执行 `python3 scripts/import_jd.py --jd <文件> --model data/capability_model.json --apply`
