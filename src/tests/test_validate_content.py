@@ -13,6 +13,9 @@ def make_fixture(tmp_path):
              "answer": "A", "difficulty": 1}]
     (data / "content" / "question_bank.json").write_text(json.dumps(bank, ensure_ascii=False), encoding="utf-8")
     (data / "content" / "case_questions.json").write_text("[]", encoding="utf-8")
+    (data / "content" / "mock_questions.json").write_text(json.dumps([
+        {"id": "m-01", "section": "technical", "question": "Q", "checklist": ["A"]}
+    ], ensure_ascii=False), encoding="utf-8")
     card = ("---\nid: A2-agent-loop\ncapability_id: A2\nminutes: 4\nquiz_ids: [q-001]\n"
             "---\n# Agent Loop\n" + "这是正文。" * 80)
     (data / "content" / "knowledge_cards" / "A2-agent-loop.md").write_text(card, encoding="utf-8")
@@ -42,3 +45,12 @@ def test_validate_reports_case_without_summary(tmp_path):
          "rubric": {"checklist": ["A"]}}], ensure_ascii=False), encoding="utf-8")
     errors = validate_content(str(data))
     assert any("summary" in e for e in errors)
+
+
+def test_validate_reports_mock_missing_question(tmp_path):
+    data = make_fixture(tmp_path)
+    (data / "content" / "mock_questions.json").write_text(json.dumps([
+        {"id": "m-01", "section": "behavioral", "checklist": ["A"]}], ensure_ascii=False),
+        encoding="utf-8")
+    errors = validate_content(str(data))
+    assert any("mock" in e and "question" in e for e in errors)

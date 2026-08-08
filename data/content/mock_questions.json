@@ -1,0 +1,56 @@
+[
+  {
+    "id": "m-be-01",
+    "section": "behavioral",
+    "question": "用 STAR 讲一个你主导的 AI/数据类项目：背景、任务、行动、结果（量化）。",
+    "checklist": ["STAR", "结果", "数据", "反思"]
+  },
+  {
+    "id": "m-be-02",
+    "section": "behavioral",
+    "question": "讲一次项目失败的复盘：发生了什么、你做了什么决策、下次如何避免。",
+    "checklist": ["背景", "决策", "结果", "反思"]
+  },
+  {
+    "id": "m-be-03",
+    "section": "behavioral",
+    "question": "最近深度使用过哪个 AI 产品？拆解它的体验亮点与缺陷，你会怎么改？",
+    "checklist": ["产品", "场景", "缺陷", "方案"]
+  },
+  {
+    "id": "m-cs-01",
+    "section": "case",
+    "question": "为客服场景设计一个 RAG 问答产品：场景选择、方案、指标、失败处理。",
+    "checklist": ["客服", "RAG", "指标", "兜底", "边界"]
+  },
+  {
+    "id": "m-cs-02",
+    "section": "case",
+    "question": "如何衡量「Agent 是否真正深入帮助了用户」？给出指标体系与验证方法。",
+    "checklist": ["任务完成率", "留存", "A/B", "定性", "成本"]
+  },
+  {
+    "id": "m-cs-03",
+    "section": "case",
+    "question": "一个 AI 功能上线后留存低于预期，你会如何排查并决定是否迭代？",
+    "checklist": ["数据", "漏斗", "假设", "实验", "止损"]
+  },
+  {
+    "id": "m-te-01",
+    "section": "technical",
+    "question": "解释 Agent Loop 与 Tool Use，并说明它们在产品中的失败场景与兜底。",
+    "checklist": ["Agent Loop", "Tool Use", "失败", "兜底", "成本"]
+  },
+  {
+    "id": "m-te-02",
+    "section": "technical",
+    "question": "LLM 幻觉的成因与产品侧应对方案（含评估与兜底）。",
+    "checklist": ["幻觉", "RAG", "评估", "引用", "兜底"]
+  },
+  {
+    "id": "m-te-03",
+    "section": "technical",
+    "question": "对比 RAG 与微调：适用场景、成本与风险。",
+    "checklist": ["RAG", "微调", "成本", "时效", "风险"]
+  }
+]

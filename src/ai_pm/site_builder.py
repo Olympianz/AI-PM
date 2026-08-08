@@ -104,16 +104,32 @@ nav.bottom .n-ico{display:block;font-size:17px;line-height:1.25}
 .prose p{margin:7px 0}
 .prose li{margin:3px 0 3px 18px}
 footer.hint{text-align:center;color:#b7bcc9;font-size:11px;margin-top:22px}
+textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;font-family:inherit;resize:vertical;background:#fff;color:var(--ink)}
+pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13px;line-height:1.7;overflow:auto}
+.btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.desk-only{display:none}
+@media (min-width:900px){
+  body{display:flex;flex-direction:column;padding-bottom:0}
+  nav.bottom{order:-1;position:static;border-bottom:1px solid var(--line);justify-content:center;gap:2px;background:#fff}
+  nav.bottom a{padding:13px 15px;font-size:12.5px}
+  nav.bottom .n-ico{display:none}
+  .wrap{max-width:980px}
+  .desk-only{display:block}
+  .card{max-width:980px}
+}
 """
 
 
 def _nav(active: str) -> str:
     tabs = [("index", "今日", "🏠"), ("learn", "学习", "📚"), ("quiz", "题库", "✏️"),
-            ("cases", "案例", "🗂"), ("progress", "进度", "📈")]
+            ("cases", "案例", "🗂"), ("outputs", "输出", "📝"),
+            ("project", "拆解", "🛠"), ("mock", "面试", "🎤"),
+            ("review", "复盘", "🔁"), ("progress", "进度", "📈")]
     items = []
     for key, label, ico in tabs:
         cls = "active" if key == active else ""
-        items.append(f'<a href="./{key}.html" class="{cls}"><span class="n-ico">{ico}</span>{label}</a>')
+        cls_attr = f' class="{cls}{" desk-only" if key in ("outputs", "project", "mock", "review") else ""}"'
+        items.append(f'<a href="./{key}.html"{cls_attr}><span class="n-ico">{ico}</span>{label}</a>')
     return '<nav class="bottom">' + "".join(items) + "</nav>"
 
 
@@ -152,6 +168,15 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     plan = _read_json(data / "learning_plan.json")
     bank = _read_json(data / "content" / "question_bank.json")
     cases = _read_json(data / "content" / "case_questions.json")
+    mocks = _read_json(data / "content" / "mock_questions.json")
+    baseline = {}
+    baseline_path = data / "assessments" / "baseline.json"
+    if baseline_path.exists():
+        baseline = _read_json(baseline_path)
+    baseline_js = ("window.BASELINE = "
+                   + json.dumps({"radar": baseline.get("radar", {}),
+                                 "gaps": baseline.get("gaps", [])},
+                                ensure_ascii=False) + ";")
 
     # ---- index.html（今日任务由 JS 按日期渲染）----
     plan_tasks = {}
@@ -285,8 +310,95 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     )
     progress_js = (f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
                    f"window.CARD_COUNT = {len(list((data / 'content' / 'knowledge_cards').glob('*.md')))};"
-                   f"window.QUIZ_COUNT = {len(bank)};")
+                   f"window.QUIZ_COUNT = {len(bank)};" + baseline_js)
     (out / "progress.html").write_text(_page("学习进度", "progress", progress_body, progress_js), encoding="utf-8")
+
+    # ---- outputs.html（输出物工作台：PRD/案例拆解/答案卡）----
+    templates = {}
+    for name in ("prd", "case_analysis", "answer_card"):
+        tp = data / "content" / "output_templates" / f"{name}.md"
+        templates[name] = tp.read_text(encoding="utf-8") if tp.exists() else ""
+    outputs_body = (
+        '<header class="top"><h1>输出物工作台</h1>'
+        '<p class="sub">PRD · 案例拆解 · 答案卡 — 深度任务在桌面完成</p></header>'
+        '<div class="card"><h2>选择模板</h2>'
+        '<div class="filters" id="tmpl-filters">'
+        '<span class="chip on" data-tmpl="prd">PRD</span>'
+        '<span class="chip" data-tmpl="case_analysis">案例拆解</span>'
+        '<span class="chip" data-tmpl="answer_card">答案卡</span>'
+        "</div>"
+        '<h2 style="margin-top:12px">编辑</h2>'
+        '<textarea id="output-editor" rows="14" placeholder="选择模板后开始写作…"></textarea>'
+        '<div class="btn-row">'
+        '<button id="save-output" class="btn">保存</button>'
+        '<button id="download-output" class="btn ghost">下载 .md</button>'
+        '<button id="new-output" class="btn ghost">清空新建</button>'
+        "</div></div>"
+        '<div class="card"><h2>已保存（<span id="artifact-count">0</span>）</h2>'
+        '<div id="artifact-list"></div></div>'
+    )
+    outputs_js = "window.OUTPUT_TEMPLATES = " + json.dumps(templates, ensure_ascii=False) + ";"
+    (out / "outputs.html").write_text(_page("输出物工作台", "outputs", outputs_body, outputs_js), encoding="utf-8")
+
+    # ---- project.html（GitHub 项目拆解工作台）----
+    proj_tmpl = (data / "content" / "github_project_template.md").read_text(encoding="utf-8")
+    project_body = (
+        '<header class="top"><h1>GitHub 项目拆解</h1>'
+        '<p class="sub">目标 / 架构 / tradeoff / 产品化启示 / 面试题</p></header>'
+        '<div class="card"><h2>编辑</h2>'
+        '<textarea id="project-editor" rows="16" placeholder="选择模板开始拆解…"></textarea>'
+        '<div class="btn-row">'
+        '<button id="save-project" class="btn">保存</button>'
+        '<button id="download-project" class="btn ghost">下载 .md</button>'
+        "</div></div>"
+        '<div class="card"><h2>已保存（<span id="project-count">0</span>）</h2>'
+        '<div id="project-list"></div></div>'
+    )
+    project_js = "window.PROJECT_TEMPLATE = " + json.dumps(proj_tmpl, ensure_ascii=False) + ";"
+    (out / "project.html").write_text(_page("项目拆解", "project", project_body, project_js), encoding="utf-8")
+
+    # ---- mock.html（模拟面试）----
+    mock_body = (
+        '<header class="top"><h1>模拟面试</h1>'
+        '<p class="sub">行为面 · 案例面 · 技术面 — 自评打分并沉淀素材</p></header>'
+        '<div class="filters" id="mock-filters">'
+        '<span class="chip on" data-sec="behavioral">行为面</span>'
+        '<span class="chip" data-sec="case">案例面</span>'
+        '<span class="chip" data-sec="technical">技术面</span>'
+        "</div>"
+        '<div id="mock-root"></div>'
+        '<p style="margin-top:14px;text-align:center"><button id="mock-score" class="btn">自评并保存</button></p>'
+        '<div class="card"><h2>历史成绩（<span id="mock-count">0</span>）</h2>'
+        '<div id="mock-history"></div></div>'
+    )
+    mock_js = "window.MOCK_QUESTIONS = " + json.dumps(mocks, ensure_ascii=False) + ";"
+    (out / "mock.html").write_text(_page("模拟面试", "mock", mock_body, mock_js), encoding="utf-8")
+
+    # ---- review.html（周复盘）----
+    review_body = (
+        '<header class="top"><h1>周复盘</h1><p class="sub" id="rev-day"></p></header>'
+        '<div class="stat-row">'
+        '<div class="stat"><div class="v" id="rev-rate">-</div><div class="k">本周完成率</div></div>'
+        '<div class="stat"><div class="v" id="rev-streak">-</div><div class="k">连续打卡</div></div>'
+        '<div class="stat"><div class="v" id="rev-art">-</div><div class="k">输出物</div></div>'
+        "</div>"
+        '<div class="stat-row">'
+        '<div class="stat"><div class="v" id="rev-quiz">-</div><div class="k">已答题目</div></div>'
+        '<div class="stat"><div class="v" id="rev-mock">-</div><div class="k">面试均分</div></div>'
+        '<div class="stat"><div class="v" id="rev-cards">-</div><div class="k">已读卡片</div></div>'
+        "</div>"
+        '<div class="card"><h2>能力雷达（基线）</h2>'
+        '<div id="radar"></div><div id="radar-gaps"></div>'
+        '<p class="muted" style="font-size:12px;margin-top:6px">来自 data/assessments/baseline.json（构建时嵌入）</p></div>'
+        '<div class="card"><h2>导入本地跟踪数据（可选）</h2>'
+        '<textarea id="tracking-paste" rows="6" placeholder="粘贴 data/tracking/checkins.jsonl 的内容…"></textarea>'
+        '<div class="btn-row"><button id="apply-tracking" class="btn ghost">合并计算</button></div></div>'
+        '<div class="card"><h2>周报文本</h2><pre id="review-text"></pre>'
+        '<div class="btn-row"><button id="copy-review" class="btn">复制周报</button></div></div>'
+    )
+    review_js = (f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
+                 f"window.QUIZ_COUNT = {len(bank)};" + baseline_js)
+    (out / "review.html").write_text(_page("周复盘", "review", review_body, review_js), encoding="utf-8")
 
     (out / "manifest.webmanifest").write_text(json.dumps({
         "name": "AI-PM", "short_name": "AI-PM", "start_url": "./index.html",
@@ -294,6 +406,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         "theme_color": "#f6f7fb", "icons": []}, ensure_ascii=False), encoding="utf-8")
 
     sw_assets = ["./", "./index.html", "./learn.html", "./quiz.html", "./cases.html",
+                 "./outputs.html", "./project.html", "./mock.html", "./review.html",
                  "./progress.html", "./manifest.webmanifest", "./assets/app.js", "./assets/style.css"]
     sw = ("const CACHE = \"ai-pm-v2\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"

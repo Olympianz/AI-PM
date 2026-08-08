@@ -60,4 +60,12 @@ def validate_content(data_dir: str) -> List[str]:
             errors.append(f"case:{c.get('id')} 缺少通勤版摘要 summary")
         if not c.get("rubric", {}).get("checklist"):
             errors.append(f"case:{c.get('id')} rubric.checklist 不能为空")
+    mocks = json.loads((data / "content" / "mock_questions.json").read_text(encoding="utf-8"))
+    for m in mocks:
+        if m.get("section") not in ("behavioral", "case", "technical"):
+            errors.append(f"mock:{m.get('id')} section 非法（应为 behavioral/case/technical）")
+        if not m.get("question"):
+            errors.append(f"mock:{m.get('id')} 缺少 question")
+        if not m.get("checklist"):
+            errors.append(f"mock:{m.get('id')} checklist 不能为空")
     return errors

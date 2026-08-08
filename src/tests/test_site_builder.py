@@ -5,6 +5,7 @@ from ai_pm.site_builder import build_site
 def make_fixture(tmp_path):
     data = pathlib.Path(tmp_path) / "data"
     (data / "content" / "knowledge_cards").mkdir(parents=True)
+    (data / "content" / "output_templates").mkdir(parents=True, exist_ok=True)
     model = {"version": 1, "domains": {"A": "AI 技术理解", "C": "数据与科学方法"},
              "items": [{"id": "A2", "domain": "A", "name": "Agent 机制", "weight": 1.0,
                         "target_level": 4, "sources": []}]}
@@ -22,6 +23,13 @@ def make_fixture(tmp_path):
               "summary": "**场景**：客服。**要点**：RAG。",
               "rubric": {"checklist": ["RAG"], "default_score": 3.0}}]
     (data / "content" / "case_questions.json").write_text(json.dumps(cases, ensure_ascii=False), encoding="utf-8")
+    mocks = [{"id": "m-01", "section": "technical", "question": "解释 Agent Loop",
+              "checklist": ["Agent Loop"]}]
+    (data / "content" / "mock_questions.json").write_text(json.dumps(mocks, ensure_ascii=False), encoding="utf-8")
+    (data / "content" / "github_project_template.md").write_text("# 项目拆解模板", encoding="utf-8")
+    for name in ("prd", "case_analysis", "answer_card"):
+        (data / "content" / "output_templates" / f"{name}.md").write_text(
+            f"# {name} 模板", encoding="utf-8")
     card = "---\nid: A2\ncapability_id: A2\nminutes: 4\nquiz_ids: [q-001]\n---\n# Agent Loop\n正文内容"
     (data / "content" / "knowledge_cards" / "A2.md").write_text(card, encoding="utf-8")
     return data
@@ -42,6 +50,10 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "cases.html" in written
     assert "cases/c-001.html" in written
     assert "progress.html" in written
+    assert "outputs.html" in written
+    assert "project.html" in written
+    assert "mock.html" in written
+    assert "review.html" in written
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
@@ -52,6 +64,10 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "cards/A2.html" in learn
     case_page = (out / "cases" / "c-001.html").read_text(encoding="utf-8")
     assert "客服" in case_page
+    mock_page = (out / "mock.html").read_text(encoding="utf-8")
+    assert "Agent Loop" in mock_page
+    review_page = (out / "review.html").read_text(encoding="utf-8")
+    assert "BASELINE" in review_page
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")

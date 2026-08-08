@@ -53,9 +53,14 @@
 
   function taskLink(t) {
     var cap0 = (t.capability_ids || [])[0] || "";
+    var desktop = window.innerWidth >= 900;
     if (t.type === "input") { return "./cards/" + cap0 + ".html"; }
     if (t.type === "practice") { return "./quiz.html#cap-" + cap0; }
     if (t.type === "case") { return "./cases.html"; }
+    if (desktop && t.type === "output") { return "./outputs.html"; }
+    if (desktop && t.type === "project") { return "./project.html"; }
+    if (desktop && t.type === "mock") { return "./mock.html"; }
+    if (desktop && t.type === "review") { return "./review.html"; }
     return null;
   }
   function taskTitle(t) {
@@ -257,6 +262,334 @@
     }
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function mdToHtml(md) {
+    var out = [];
+    (md || "").split("\n").forEach(function (line) {
+      var s = line.trim();
+      if (!s) { return; }
+      var m = s.match(/^(#{1,4})\s+(.*)$/);
+      if (m) {
+        var lv = m[1].length;
+        out.push("<h" + lv + ">" + escapeHtml(m[2]) + "</h" + lv + ">");
+      } else if (s.indexOf("- ") === 0) {
+        out.push("<li>" + escapeHtml(s.slice(2)) + "</li>");
+      } else if (s.indexOf("**") === 0 && s.lastIndexOf("**") === s.length - 2) {
+        out.push("<p><strong>" + escapeHtml(s.slice(2, -2)) + "</strong></p>");
+      } else {
+        out.push("<p>" + escapeHtml(s) + "</p>");
+      }
+    });
+    return out.join("");
+  }
+
+  function renderOutputs() {
+    var editor = document.getElementById("output-editor");
+    if (!editor) { return; }
+    var state = load();
+    state.artifacts = state.artifacts || [];
+    var currentType = "prd";
+    var filters = document.getElementById("tmpl-filters");
+    if (filters) {
+      filters.querySelectorAll(".chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          filters.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+          chip.classList.add("on");
+          currentType = chip.dataset.tmpl;
+          if (window.OUTPUT_TEMPLATES) { editor.value = window.OUTPUT_TEMPLATES[currentType] || ""; }
+        });
+      });
+    }
+    function titleOf(content) {
+      var m = (content || "").match(/^#\s+(.+)$/m);
+      return m ? m[1].trim() : currentType;
+    }
+    function renderList() {
+      var list = document.getElementById("artifact-list");
+      var count = document.getElementById("artifact-count");
+      if (!list) { return; }
+      var items = state.artifacts.filter(function (a) {
+        return a.type !== "project";
+      });
+      if (count) { count.textContent = items.length; }
+      list.innerHTML = items.map(function (a) {
+        return '<div class="task">' +
+          '<span class="t-ico">📝</span>' +
+          '<span class="t-main"><span class="t-title">' + escapeHtml(a.title) + "</span>" +
+          '<span class="t-meta">' + a.type + " · " + a.updated_at + "</span></span>" +
+          '<button class="btn ghost" data-load="' + a.id + '" style="padding:6px 12px;font-size:12px">打开</button>' +
+          '<button class="btn ghost" data-del="' + a.id + '" style="padding:6px 12px;font-size:12px">删除</button>' +
+          "</div>";
+      }).join("") || '<p class="muted" style="padding:8px 0">还没有输出物，写一份 PRD 开始吧。</p>';
+      list.querySelectorAll("[data-load]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var a = state.artifacts.find(function (x) { return String(x.id) === btn.dataset.load; });
+          if (a) { editor.value = a.content; }
+        });
+      });
+      list.querySelectorAll("[data-del]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          state.artifacts = state.artifacts.filter(function (x) { return String(x.id) !== btn.dataset.del; });
+          save(state);
+          renderList();
+        });
+      });
+    }
+    document.getElementById("save-output").onclick = function () {
+      if (!editor.value.trim()) { alert("内容为空"); return; }
+      state.artifacts.push({ id: Date.now(), type: currentType,
+                             title: titleOf(editor.value), content: editor.value,
+                             updated_at: todayISO() });
+      save(state);
+      renderList();
+      alert("已保存");
+    };
+    var dl = document.getElementById("download-output");
+    if (dl) {
+      dl.onclick = function () {
+        if (!editor.value.trim()) { alert("内容为空"); return; }
+        var blob = new Blob([editor.value], { type: "text/markdown" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = titleOf(editor.value) + ".md";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+    }
+    var neu = document.getElementById("new-output");
+    if (neu) { neu.onclick = function () { editor.value = ""; }; }
+    if (window.OUTPUT_TEMPLATES) { editor.value = window.OUTPUT_TEMPLATES.prd || ""; }
+    renderList();
+  }
+
+  function renderProject() {
+    var editor = document.getElementById("project-editor");
+    if (!editor) { return; }
+    var state = load();
+    state.artifacts = state.artifacts || [];
+    if (window.PROJECT_TEMPLATE) { editor.value = window.PROJECT_TEMPLATE; }
+    function renderList() {
+      var list = document.getElementById("project-list");
+      var count = document.getElementById("project-count");
+      var items = state.artifacts.filter(function (a) { return a.type === "project"; });
+      if (count) { count.textContent = items.length; }
+      list.innerHTML = items.map(function (a) {
+        return '<div class="task"><span class="t-ico">🛠</span>' +
+          '<span class="t-main"><span class="t-title">' + escapeHtml(a.title) + "</span>" +
+          '<span class="t-meta">' + a.updated_at + "</span></span>" +
+          '<button class="btn ghost" data-load="' + a.id + '" style="padding:6px 12px;font-size:12px">打开</button>' +
+          '<button class="btn ghost" data-del="' + a.id + '" style="padding:6px 12px;font-size:12px">删除</button>' +
+          "</div>";
+      }).join("") || '<p class="muted" style="padding:8px 0">还没有拆解记录。</p>';
+      list.querySelectorAll("[data-load]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var a = state.artifacts.find(function (x) { return String(x.id) === btn.dataset.load; });
+          if (a) { editor.value = a.content; }
+        });
+      });
+      list.querySelectorAll("[data-del]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          state.artifacts = state.artifacts.filter(function (x) { return String(x.id) !== btn.dataset.del; });
+          save(state);
+          renderList();
+        });
+      });
+    }
+    document.getElementById("save-project").onclick = function () {
+      if (!editor.value.trim()) { alert("内容为空"); return; }
+      var m = editor.value.match(/^#\s+(.+)$/m);
+      state.artifacts.push({ id: Date.now(), type: "project",
+                             title: m ? m[1].trim() : "项目拆解", content: editor.value,
+                             updated_at: todayISO() });
+      save(state);
+      renderList();
+      alert("已保存");
+    };
+    var dl = document.getElementById("download-project");
+    if (dl) {
+      dl.onclick = function () {
+        var blob = new Blob([editor.value], { type: "text/markdown" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "项目拆解.md";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+    }
+    renderList();
+  }
+
+  function renderMock() {
+    var root = document.getElementById("mock-root");
+    if (!root || !window.MOCK_QUESTIONS) { return; }
+    var state = load();
+    state.mocks = state.mocks || [];
+    var section = "behavioral";
+    var filters = document.getElementById("mock-filters");
+    function render() {
+      var qs = window.MOCK_QUESTIONS.filter(function (q) { return q.section === section; });
+      root.innerHTML = qs.map(function (q, idx) {
+        return '<div class="card" data-qid="' + q.id + '" style="margin-top:12px">' +
+          "<h2>Q" + (idx + 1) + "</h2>" +
+          '<p style="font-weight:620">' + escapeHtml(q.question) + "</p>" +
+          '<textarea data-answer rows="5" placeholder="写下你的回答…" style="margin-top:8px"></textarea>' +
+          '<p class="muted" style="font-size:12px;margin-top:6px">自评：回答覆盖了哪些要点？</p>' +
+          q.checklist.map(function (kw) {
+            return '<label style="display:block;margin:4px 0;font-size:13px">' +
+              '<input type="checkbox" data-kw value="' + escapeHtml(kw) + '"> ' + escapeHtml(kw) + "</label>";
+          }).join("") +
+          '<p class="muted" data-score style="font-size:12px;margin-top:6px"></p></div>';
+      }).join("") || '<p class="muted">该场次暂无题目。</p>';
+    }
+    filters.querySelectorAll(".chip").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        filters.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+        chip.classList.add("on");
+        section = chip.dataset.sec;
+        render();
+      });
+    });
+    document.getElementById("mock-score").onclick = function () {
+      var saved = 0;
+      root.querySelectorAll(".card[data-qid]").forEach(function (card) {
+        var qid = card.dataset.qid;
+        var answer = card.querySelector("[data-answer]").value.trim();
+        if (!answer) { return; }
+        var kws = card.querySelectorAll("[data-kw]");
+        var checked = 0;
+        kws.forEach(function (k) { if (k.checked) { checked += 1; } });
+        var total = kws.length || 1;
+        var score = Math.round((1 + 4 * checked / total) * 100) / 100;
+        state.mocks = state.mocks.filter(function (m) {
+          return !(m.section === section && m.question_id === qid && m.date === todayISO());
+        });
+        state.mocks.push({ date: todayISO(), section: section, question_id: qid,
+                           score: score, covered: checked, total: total });
+        saved += 1;
+        card.querySelector("[data-score]").textContent = "得分 " + score.toFixed(2) + "（覆盖 " + checked + "/" + total + "）";
+      });
+      save(state);
+      renderHistory();
+      alert(saved ? "已保存 " + saved + " 道题的自评" : "请先填写回答");
+    };
+    function renderHistory() {
+      var list = document.getElementById("mock-history");
+      var count = document.getElementById("mock-count");
+      if (!list) { return; }
+      if (count) { count.textContent = state.mocks.length; }
+      var names = { behavioral: "行为面", case: "案例面", technical: "技术面" };
+      var html = "";
+      ["behavioral", "case", "technical"].forEach(function (sec) {
+        var rows = state.mocks.filter(function (m) { return m.section === sec; });
+        if (!rows.length) { return; }
+        var avg = rows.reduce(function (s, m) { return s + m.score; }, 0) / rows.length;
+        html += '<p style="font-size:13px;margin:6px 0"><strong>' + names[sec] + "</strong> · " +
+          rows.length + " 次 · 均分 " + avg.toFixed(2) + "</p>";
+      });
+      list.innerHTML = html || '<p class="muted">还没有模拟面试记录。</p>';
+    }
+    render();
+    renderHistory();
+  }
+
+  function renderReview() {
+    if (!document.getElementById("review-text")) { return; }
+    var state = load();
+    state.checkins = state.checkins || [];
+    state.tasks = state.tasks || {};
+    state.quiz_answers = state.quiz_answers || [];
+    state.read_cards = state.read_cards || {};
+    state.artifacts = state.artifacts || [];
+    state.mocks = state.mocks || [];
+    var today = todayISO();
+    if (document.getElementById("rev-day")) {
+      document.getElementById("rev-day").textContent = "数据截止 " + today;
+    }
+    var checkins = state.checkins.slice();
+    var paste = document.getElementById("tracking-paste");
+    if (paste && paste.value.trim()) {
+      paste.value.trim().split("\n").forEach(function (line) {
+        try {
+          var rec = JSON.parse(line);
+          if (rec && rec.date && checkins.indexOf(rec.date) === -1) { checkins.push(rec.date); }
+        } catch (e) { /* 忽略坏行 */ }
+      });
+    }
+    var days = [];
+    for (var i = 0; i < 7; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    var hit = days.filter(function (d) { return checkins.indexOf(d) !== -1; }).length;
+    var sorted = checkins.slice().sort();
+    var streak = 0;
+    if (sorted.length) {
+      var cur = new Date(sorted[sorted.length - 1] + "T00:00:00");
+      while (checkins.indexOf(cur.toISOString().slice(0, 10)) !== -1) {
+        streak += 1;
+        cur.setDate(cur.getDate() - 1);
+      }
+    }
+    var artifacts = state.artifacts.length;
+    var quiz = state.quiz_answers.length;
+    var cards = Object.keys(state.read_cards).length;
+    var mocks = state.mocks;
+    var mockAvg = mocks.length
+      ? (mocks.reduce(function (s, m) { return s + m.score; }, 0) / mocks.length).toFixed(2)
+      : "—";
+    document.getElementById("rev-rate").textContent = hit + "/7";
+    document.getElementById("rev-streak").textContent = streak + " 天";
+    document.getElementById("rev-art").textContent = artifacts;
+    document.getElementById("rev-quiz").textContent = quiz + "/" + (window.QUIZ_COUNT || 0);
+    document.getElementById("rev-mock").textContent = mockAvg;
+    document.getElementById("rev-cards").textContent = cards + "/" + (window.CARD_COUNT || 0);
+
+    var radar = (window.BASELINE && window.BASELINE.radar) || {};
+    var names = { A: "AI 技术理解", B: "产品设计与体验", C: "数据与科学方法",
+                  D: "战略与规划", E: "工程协作与工具", F: "软技能" };
+    var radarHtml = Object.keys(names).map(function (k) {
+      var v = radar[k] || 0;
+      return '<p style="font-size:13px;margin:5px 0">' + names[k] +
+        '<span style="float:right">L' + v + "</span></p>" +
+        '<div style="background:var(--line);border-radius:6px;height:8px;overflow:hidden">' +
+        '<div style="width:' + Math.min(v / 5 * 100, 100) + '%;height:100%;background:var(--accent)"></div></div>';
+    }).join("");
+    var radarEl = document.getElementById("radar");
+    if (radarEl) { radarEl.innerHTML = radarHtml; }
+    var gaps = (window.BASELINE && window.BASELINE.gaps) || [];
+    var gapsEl = document.getElementById("radar-gaps");
+    if (gapsEl) {
+      gapsEl.innerHTML = '<h2 style="margin-top:12px">待补强</h2>' + gaps.slice(0, 5).map(function (g) {
+        return '<p style="font-size:13px;margin:4px 0">· ' + escapeHtml(g.name) +
+          "（L" + g.current_level + " → L" + g.target_level + "）</p>";
+      }).join("") || '<p class="muted">暂无数据</p>';
+    }
+    function buildText() {
+      return "# 周复盘 " + today + "\n" +
+        "- 完成率：" + hit + "/7\n" +
+        "- 连击：" + streak + " 天\n" +
+        "- 输出物：" + artifacts + " 份\n" +
+        "- 已答题目：" + quiz + "/" + (window.QUIZ_COUNT || 0) + "\n" +
+        "- 已读卡片：" + cards + "/" + (window.CARD_COUNT || 0) + "\n" +
+        "- 模拟面试均分：" + mockAvg + "\n" +
+        "- 能力雷达：" + JSON.stringify(radar) + "\n" +
+        "- 待补强：" + JSON.stringify(gaps.slice(0, 5)) + "\n";
+    }
+    var pre = document.getElementById("review-text");
+    pre.textContent = buildText();
+    var applyBtn = document.getElementById("apply-tracking");
+    if (applyBtn) { applyBtn.onclick = function () { renderReview(); }; }
+    var copyBtn = document.getElementById("copy-review");
+    if (copyBtn) {
+      copyBtn.onclick = function () {
+        navigator.clipboard.writeText(pre.textContent).then(function () { alert("已复制周报"); });
+      };
+    }
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   renderCheckin();
@@ -264,4 +597,8 @@
   renderQuiz();
   markCardRead();
   renderProgress();
+  renderOutputs();
+  renderProject();
+  renderMock();
+  renderReview();
 })();

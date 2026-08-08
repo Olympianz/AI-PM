@@ -45,3 +45,16 @@ nav.bottom .n-ico{display:block;font-size:17px;line-height:1.25}
 .prose p{margin:7px 0}
 .prose li{margin:3px 0 3px 18px}
 footer.hint{text-align:center;color:#b7bcc9;font-size:11px;margin-top:22px}
+textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;font-family:inherit;resize:vertical;background:#fff;color:var(--ink)}
+pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13px;line-height:1.7;overflow:auto}
+.btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.desk-only{display:none}
+@media (min-width:900px){
+  body{display:flex;flex-direction:column;padding-bottom:0}
+  nav.bottom{order:-1;position:static;border-bottom:1px solid var(--line);justify-content:center;gap:2px;background:#fff}
+  nav.bottom a{padding:13px 15px;font-size:12.5px}
+  nav.bottom .n-ico{display:none}
+  .wrap{max-width:980px}
+  .desk-only{display:block}
+  .card{max-width:980px}
+}
