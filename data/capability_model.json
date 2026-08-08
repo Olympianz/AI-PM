@@ -1,0 +1,334 @@
+{
+  "version": 1,
+  "domains": {
+    "B": "B",
+    "D": "D",
+    "C": "C",
+    "F": "F",
+    "A": "A",
+    "E": "E"
+  },
+  "items": [
+    {
+      "id": "B1",
+      "domain": "B",
+      "name": "AI/对话/Agent 交互设计与体验",
+      "description": "降低使用门槛，提升使用深度、留存、粘性与转化",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0028,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm"
+      ]
+    },
+    {
+      "id": "D1",
+      "domain": "D",
+      "name": "技术与用户价值权衡",
+      "description": "在技术能力与用户价值之间寻找最佳路径",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0004,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm"
+      ]
+    },
+    {
+      "id": "B2",
+      "domain": "B",
+      "name": "场景识别与需求拆解",
+      "description": "从真实用户需求和使用场景出发定位产品问题",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.023,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "D2",
+      "domain": "D",
+      "name": "产品路线图与优先级",
+      "description": "制定并执行产品路线图，合理规划优先级",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0214,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "D3",
+      "domain": "D",
+      "name": "平台/开放/开发者产品",
+      "description": "有开放平台、开发者与生态产品意识",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0008,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm"
+      ]
+    },
+    {
+      "id": "C1",
+      "domain": "C",
+      "name": "数据驱动决策",
+      "description": "把用户体感、产品直觉与行为数据结合判断",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0032,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm"
+      ]
+    },
+    {
+      "id": "F1",
+      "domain": "F",
+      "name": "项目管理与交付",
+      "description": "推进需求从调研、方案、评审、开发到上线的完整交付",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0556,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "A1",
+      "domain": "A",
+      "name": "Agent 机制与架构",
+      "description": "理解 Agent Loop、Tool Use、Reasoning、Planning、Skills、MCP、Memory、Subagent、Multi-Agent",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.1864,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "A2",
+      "domain": "A",
+      "name": "LLM 能力边界与 API",
+      "description": "理解模型能力边界、LLM API 及其局限",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0214,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "B3",
+      "domain": "B",
+      "name": "产品品味与细节",
+      "description": "有好的产品品味，注重日常交互细节",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0214,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "F2",
+      "domain": "F",
+      "name": "自驱与独立推进",
+      "description": "自驱力强，能独立推进复杂项目的规划、排期与迭代",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0008,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm"
+      ]
+    },
+    {
+      "id": "F3",
+      "domain": "F",
+      "name": "沟通与协作",
+      "description": "沟通力强，能与多团队协作",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.042,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "E1",
+      "domain": "E",
+      "name": "vibe coding / AI coding",
+      "description": "能使用 vibe coding 与 AI 工具写代码提升效率",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.1249,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "E2",
+      "domain": "E",
+      "name": "AI 辅助原型与 UI/UX 设计",
+      "description": "具备 UI/UX 设计素养，能在 AI 辅助下完成原型与 UI 设计",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.042,
+      "target_level": 3,
+      "sources": [
+        "deepseek-ai-pm",
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "E3",
+      "domain": "E",
+      "name": "与研究员/工程师协作",
+      "description": "能与模型训练团队研究员、工程师深度协作",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0722,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "E4",
+      "domain": "E",
+      "name": "开源社区与开发者社群",
+      "description": "维护开源社区与开发者社群关系，能用英文书面沟通",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0928,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "C2",
+      "domain": "C",
+      "name": "指标体系设计",
+      "description": "能定义与衡量产品价值的指标体系",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0206,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "A3",
+      "domain": "A",
+      "name": "性能与上下文工程",
+      "description": "理解 KV Cache、Context Engineering、Harness Engineering 等性能与上下文概念",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0619,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "A4",
+      "domain": "A",
+      "name": "Prompt Engineering 实践",
+      "description": "有 Prompt Engineering 第一手实践",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0206,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "C3",
+      "domain": "C",
+      "name": "用户研究方法",
+      "description": "能设计问卷、访谈等系统性收集数据的方法",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0412,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "C4",
+      "domain": "C",
+      "name": "A/B 与灰度测试",
+      "description": "能设计并分析 A/B 测试与灰度测试",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0412,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "C5",
+      "domain": "C",
+      "name": "统计分析",
+      "description": "使用统计学工具严谨分析数据",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0206,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "B4",
+      "domain": "B",
+      "name": "边界条件与失败场景感知",
+      "description": "对异常分支、边界条件与失败场景有敏锐嗅觉",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0619,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    },
+    {
+      "id": "F4",
+      "domain": "F",
+      "name": "英文书面沟通",
+      "description": "能用英文与开源社区、用户社群书面沟通",
+      "behavioral_indicators": [],
+      "evidence_requirements": [],
+      "weight": 0.0206,
+      "target_level": 3,
+      "sources": [
+        "deepseek-agent-harness"
+      ]
+    }
+  ]
+}
