@@ -1,0 +1,14 @@
+[
+  {
+    "id": "c-001",
+    "capability_ids": ["B2", "B4"],
+    "question": "为客服场景设计一个 RAG 问答产品。你会如何识别高价值场景，并处理回答失败的情况？",
+    "rubric": {"checklist": ["客服", "RAG", "评估", "边界", "兜底"], "default_score": 3.0}
+  },
+  {
+    "id": "c-002",
+    "capability_ids": ["C2", "C4"],
+    "question": "如何衡量「Agent 是否真正深入帮助了用户」？请给出指标体系与验证方法。",
+    "rubric": {"checklist": ["任务完成率", "留存", "A/B", "样本量", "定性"], "default_score": 3.0}
+  }
+]
