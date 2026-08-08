@@ -5,6 +5,10 @@ from ai_pm.site_builder import build_site
 def make_fixture(tmp_path):
     data = pathlib.Path(tmp_path) / "data"
     (data / "content" / "knowledge_cards").mkdir(parents=True)
+    model = {"version": 1, "domains": {"A": "AI 技术理解", "C": "数据与科学方法"},
+             "items": [{"id": "A2", "domain": "A", "name": "Agent 机制", "weight": 1.0,
+                        "target_level": 4, "sources": []}]}
+    (data / "capability_model.json").write_text(json.dumps(model, ensure_ascii=False), encoding="utf-8")
     plan = {"start_date": "2026-08-10", "weeks": [{"week": 1, "focus_ids": ["A2"]}],
             "days": [{"id": "2026-08-10-input", "date": "2026-08-10", "week": 1, "day": 0,
                       "type": "input", "capability_ids": ["A2"],
@@ -14,7 +18,10 @@ def make_fixture(tmp_path):
     bank = [{"id": "q-001", "capability_id": "A2", "question": "Q", "options": ["A", "B"],
              "answer": "A", "difficulty": 1}]
     (data / "content" / "question_bank.json").write_text(json.dumps(bank, ensure_ascii=False), encoding="utf-8")
-    (data / "content" / "case_questions.json").write_text("[]", encoding="utf-8")
+    cases = [{"id": "c-001", "capability_ids": ["A2"], "question": "Q",
+              "summary": "**场景**：客服。**要点**：RAG。",
+              "rubric": {"checklist": ["RAG"], "default_score": 3.0}}]
+    (data / "content" / "case_questions.json").write_text(json.dumps(cases, ensure_ascii=False), encoding="utf-8")
     card = "---\nid: A2\ncapability_id: A2\nminutes: 4\nquiz_ids: [q-001]\n---\n# Agent Loop\n正文内容"
     (data / "content" / "knowledge_cards" / "A2.md").write_text(card, encoding="utf-8")
     return data
@@ -29,13 +36,24 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "manifest.webmanifest" in written
     assert "sw.js" in written
     assert "assets/app.js" in written
+    assert "assets/style.css" in written
     assert "cards/A2.html" in written
+    assert "learn.html" in written
+    assert "cases.html" in written
+    assert "cases/c-001.html" in written
+    assert "progress.html" in written
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
+    assert "./learn.html" in index
     quiz = (out / "quiz.html").read_text(encoding="utf-8")
     assert "q-001" in quiz
+    learn = (out / "learn.html").read_text(encoding="utf-8")
+    assert "cards/A2.html" in learn
+    case_page = (out / "cases" / "c-001.html").read_text(encoding="utf-8")
+    assert "客服" in case_page
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
-    assert "ai-pm-v1" in sw
+    assert "ai-pm-v2" in sw
+    assert "learn.html" in sw

@@ -1,5 +1,5 @@
-const CACHE = "ai-pm-v1";
-const ASSETS = ["./", "./index.html", "./quiz.html", "./manifest.webmanifest", "./assets/app.js"];
+const CACHE = "ai-pm-v2";
+const ASSETS = ["./", "./index.html", "./learn.html", "./quiz.html", "./cases.html", "./progress.html", "./manifest.webmanifest", "./assets/app.js", "./assets/style.css"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();

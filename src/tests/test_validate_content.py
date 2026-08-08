@@ -33,3 +33,12 @@ def test_validate_reports_broken_card(tmp_path):
     joined = "\n".join(errors)
     assert "minutes" in joined
     assert "q-999" in joined
+
+
+def test_validate_reports_case_without_summary(tmp_path):
+    data = make_fixture(tmp_path)
+    (data / "content" / "case_questions.json").write_text(json.dumps([
+        {"id": "c-001", "capability_ids": ["A2"], "question": "Q",
+         "rubric": {"checklist": ["A"]}}], ensure_ascii=False), encoding="utf-8")
+    errors = validate_content(str(data))
+    assert any("summary" in e for e in errors)

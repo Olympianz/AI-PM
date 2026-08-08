@@ -56,6 +56,8 @@ def validate_content(data_dir: str) -> List[str]:
             errors.append(f"card:{name} 正文字数 {length}，应在 300-500 之间")
     cases = json.loads((data / "content" / "case_questions.json").read_text(encoding="utf-8"))
     for c in cases:
+        if not c.get("summary"):
+            errors.append(f"case:{c.get('id')} 缺少通勤版摘要 summary")
         if not c.get("rubric", {}).get("checklist"):
             errors.append(f"case:{c.get('id')} rubric.checklist 不能为空")
     return errors

@@ -1,10 +1,5 @@
-<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.webmanifest"><title>A1</title></head><body>
-<h1>A1</h1>
-<p>预计 4 分钟</p>
-<h2>Agent Loop：一次任务从输入到完成</h2>
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./assets/style.css"><title>Agent Loop：一次任务从输入到完成</title></head><body><div class="wrap"><header class="top"><h1>知识卡</h1><p class="sub">Agent 机制与架构 · 约 4 分钟</p></header><div class="card prose"><h2>Agent Loop：一次任务从输入到完成</h2>
 <p>Agent Loop 是 Agent 执行一次任务的循环骨架：感知（Perceive）→ 规划（Plan）→ 行动（Act）→ 观察（Observe），循环往复直到任务完成或达到终止条件。</p>
 <p>感知阶段把用户输入与上下文（Memory、工具返回结果）整理成模型可处理的状态；规划阶段由模型决定下一步动作或拆分子任务；行动阶段调用 Tool Use 执行（如搜索、读写文件、调用 API）；观察阶段把执行结果反馈回上下文，进入下一轮。</p>
 <p>关键产品含义：Loop 的长度与失败恢复能力直接决定用户体验。没有工具回退和重试的产品，遇到一次工具报错就可能让任务失败；而设计良好的 Agent 会把失败转成可观察的中间状态，让用户知道进展。</p>
-<p>给 PM 的三个检查点：1）每个行动是否都有可观测状态；2）失败时是否有兜底与重试；3）长 Loop 的成本（Token 与延迟）是否可控。</p>
-<p><a href="../index.html">← 返回今日任务</a></p>
-<script src="./assets/app.js"></script></body></html>
+<p>给 PM 的三个检查点：1）每个行动是否都有可观测状态；2）失败时是否有兜底与重试；3）长 Loop 的成本（Token 与延迟）是否可控。</p></div><p style="margin-top:14px;text-align:center"><a class="btn ghost" href="../learn.html">← 返回知识卡</a></p></div><nav class="bottom"><a href="./index.html" class=""><span class="n-ico">🏠</span>今日</a><a href="./learn.html" class="active"><span class="n-ico">📚</span>学习</a><a href="./quiz.html" class=""><span class="n-ico">✏️</span>题库</a><a href="./cases.html" class=""><span class="n-ico">🗂</span>案例</a><a href="./progress.html" class=""><span class="n-ico">📈</span>进度</a></nav><script>window.PAGE="learn";</script><script>window.CARD_ID = "A1";</script><script src="./assets/app.js"></script></body></html>
