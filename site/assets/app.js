@@ -44,6 +44,9 @@
         return { id: m.question_id + "-" + m.date, date: m.date, section: m.section,
                  question_id: m.question_id, score: m.score, covered: m.covered,
                  total: m.total };
+      }),
+      topic_progress: Object.keys(state.topic_progress || {}).map(function (tid) {
+        return { topic_id: tid, data: state.topic_progress[tid] };
       })
     };
     return fetch("./api/sync", {
@@ -62,6 +65,7 @@
         state.quiz_answers = state.quiz_answers || [];
         state.artifacts = state.artifacts || [];
         state.mocks = state.mocks || [];
+        state.topic_progress = state.topic_progress || {};
         (data.checkins || []).forEach(function (c) {
           if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
         });
@@ -81,6 +85,9 @@
         (data.mocks || []).forEach(function (m) {
           var k = m.question_id + "|" + m.date;
           if (!mockKeys[k]) { state.mocks.push(m); mockKeys[k] = 1; }
+        });
+        (data.topic_progress || []).forEach(function (tp) {
+          if (tp && tp.topic_id) { state.topic_progress[tp.topic_id] = tp.data || {}; }
         });
         save(state);
         return state;
@@ -672,6 +679,124 @@
     }
   }
 
+  function getTopicProgress() {
+    var topic = window.TOPIC;
+    if (!topic) { return {}; }
+    var state = load();
+    state.topic_progress = state.topic_progress || {};
+    return state.topic_progress[topic.id] || { modules: {}, quiz_correct: 0, quiz_total: 0 };
+  }
+
+  function aiCall(action, question) {
+    var topic = window.TOPIC || {};
+    return fetch("./api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: action,
+        question: question || "",
+        topic_name: topic.name || "",
+        topic_context: {
+          reason: topic.reason || "",
+          goals: topic.goals || [],
+          modules: (topic.modules || []).map(function (m) { return m.title; }),
+          progress: getTopicProgress()
+        }
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { throw new Error(d.error); }
+      return d.text;
+    });
+  }
+
+  function renderTopic() {
+    var topic = window.TOPIC;
+    if (!topic) { return; }
+    var state = load();
+    state.topic_progress = state.topic_progress || {};
+    var prog = state.topic_progress[topic.id] ||
+      { modules: {}, quiz_correct: 0, quiz_total: 0, summary: "" };
+    var moduleTitles = (topic.modules || []).map(function (m) { return m.title; });
+    function updateProgress() {
+      var doneCount = moduleTitles.filter(function (t) { return prog.modules[t]; }).length;
+      var el = document.getElementById("topic-progress");
+      if (el) {
+        el.textContent = "模块完成 " + doneCount + "/" + moduleTitles.length +
+          " · 自测 " + prog.quiz_correct + "/" + prog.quiz_total;
+      }
+    }
+    document.querySelectorAll("#topic-modules input[data-module]").forEach(function (box) {
+      if (prog.modules[box.dataset.module]) { box.checked = true; }
+      box.addEventListener("change", function () {
+        prog.modules[box.dataset.module] = box.checked;
+        state.topic_progress[topic.id] = prog;
+        save(state);
+        updateProgress();
+      });
+    });
+    var submit = document.getElementById("topic-quiz-submit");
+    if (submit) {
+      submit.onclick = function () {
+        var correct = 0, total = (topic.quiz || []).length, answered = 0;
+        (topic.quiz || []).forEach(function (q, i) {
+          var card = document.querySelectorAll("#topic-quiz .card")[i];
+          if (!card) { return; }
+          var sel = card.querySelector('input[name="tq-' + i + '"]:checked');
+          var explain = card.querySelector("[data-explain]");
+          if (!sel) { return; }
+          answered += 1;
+          card.querySelectorAll(".opt").forEach(function (label) {
+            var inp = label.querySelector("input");
+            if (inp.value === q.answer) { label.classList.add("correct"); }
+            else if (inp.checked) { label.classList.add("wrong"); }
+            inp.disabled = true;
+          });
+          if (sel.value === q.answer) { correct += 1; }
+          if (explain) { explain.style.display = "block"; }
+        });
+        if (!answered) { alert("请先作答再提交"); return; }
+        prog.quiz_correct = correct;
+        prog.quiz_total = total;
+        state.topic_progress[topic.id] = prog;
+        save(state);
+        updateProgress();
+        alert("答对 " + correct + "/" + total);
+      };
+    }
+    var resultEl = document.getElementById("ai-result");
+    function runAi(action, label, question) {
+      if (resultEl) {
+        resultEl.classList.add("show");
+        resultEl.textContent = label + "…";
+      }
+      aiCall(action, question).then(function (text) {
+        if (resultEl) { resultEl.textContent = text; }
+        if (action === "summary") {
+          prog.summary = text;
+          state.topic_progress[topic.id] = prog;
+          save(state);
+        }
+      }).catch(function (e) {
+        if (resultEl) { resultEl.textContent = "AI 请求失败：" + e.message; }
+      });
+    }
+    var planBtn = document.getElementById("ai-plan");
+    if (planBtn) { planBtn.onclick = function () { runAi("plan", "正在生成学习计划"); }; }
+    var quizBtn = document.getElementById("ai-quiz");
+    if (quizBtn) { quizBtn.onclick = function () { runAi("quiz", "正在出题"); }; }
+    var sumBtn = document.getElementById("ai-summary");
+    if (sumBtn) { sumBtn.onclick = function () { runAi("summary", "正在总结进度"); }; }
+    var askBtn = document.getElementById("ai-ask");
+    if (askBtn) {
+      askBtn.onclick = function () {
+        var q = document.getElementById("ai-question").value.trim();
+        if (!q) { alert("请输入问题"); return; }
+        runAi("ask", "正在回答", q);
+      };
+    }
+    updateProgress();
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   renderCheckin();
@@ -683,6 +808,7 @@
   renderProject();
   renderMock();
   renderReview();
+  renderTopic();
   renderCloudSync();
   cloudPull().catch(function () { /* 本地环境无 API，静默 */ });
 })();

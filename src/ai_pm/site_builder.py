@@ -107,6 +107,9 @@ footer.hint{text-align:center;color:#b7bcc9;font-size:11px;margin-top:22px}
 textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;font-family:inherit;resize:vertical;background:#fff;color:var(--ink)}
 pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13px;line-height:1.7;overflow:auto}
 .btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.ai-result{background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-top:10px;display:none;max-height:420px;overflow:auto}
+.ai-result.show{display:block}
+.progress-line{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
 .desk-only{display:none}
 @media (min-width:900px){
   body{display:flex;flex-direction:column;padding-bottom:0}
@@ -122,7 +125,7 @@ pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-
 
 def _nav(active: str) -> str:
     tabs = [("index", "今日", "🏠"), ("learn", "学习", "📚"), ("quiz", "题库", "✏️"),
-            ("cases", "案例", "🗂"), ("outputs", "输出", "📝"),
+            ("cases", "案例", "🗂"), ("topics", "专题", "🎯"), ("outputs", "输出", "📝"),
             ("project", "拆解", "🛠"), ("mock", "面试", "🎤"),
             ("review", "复盘", "🔁"), ("progress", "进度", "📈")]
     items = []
@@ -160,6 +163,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     (out / "assets").mkdir(parents=True, exist_ok=True)
     (out / "cards").mkdir(parents=True, exist_ok=True)
     (out / "cases").mkdir(parents=True, exist_ok=True)
+    (out / "topics").mkdir(parents=True, exist_ok=True)
     (out / "assets" / "style.css").write_text(_CSS, encoding="utf-8")
 
     model = _read_json(data / "capability_model.json")
@@ -169,6 +173,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     bank = _read_json(data / "content" / "question_bank.json")
     cases = _read_json(data / "content" / "case_questions.json")
     mocks = _read_json(data / "content" / "mock_questions.json")
+    topics = _read_json(data / "content" / "topics.json")
     baseline = {}
     baseline_path = data / "assessments" / "baseline.json"
     if baseline_path.exists():
@@ -197,6 +202,8 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<div class="e-meta">21 题 · 即答即反馈</div></a>'
         '<a class="entry" href="./cases.html"><div class="e-ico">🗂</div><div class="e-title">案例拆解</div>'
         '<div class="e-meta">2 个 · 通勤版摘要</div></a>'
+        '<a class="entry" href="./topics.html"><div class="e-ico">🎯</div><div class="e-title">专题学习</div>'
+        '<div class="e-meta">UX · A/B 测试 · AI 辅助</div></a>'
         '<a class="entry" href="./progress.html"><div class="e-ico">📈</div><div class="e-title">进度</div>'
         '<div class="e-meta">打卡 · 掌握度</div></a>'
         "</div>"
@@ -403,6 +410,70 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  f"window.QUIZ_COUNT = {len(bank)};" + baseline_js)
     (out / "review.html").write_text(_page("周复盘", "review", review_body, review_js), encoding="utf-8")
 
+    # ---- topics.html + topics/<id>.html（专题学习）----
+    topic_cards = []
+    for t in topics:
+        topic_cards.append(
+            f'<a class="task" href="./topics/{t["id"]}.html">'
+            '<span class="t-ico">🎯</span>'
+            f'<span class="t-main"><span class="t-title">{t["name"]}</span>'
+            f'<span class="t-meta">{t["reason"]}</span></span>'
+            '<span class="t-arrow">›</span></a>')
+    topics_body = (
+        '<header class="top"><h1>主题学习</h1>'
+        '<p class="sub">针对个人短板开专题 · AI 辅助计划/出题/总结</p></header>'
+        '<div class="card">' + "".join(topic_cards) + "</div>"
+    )
+    (out / "topics.html").write_text(_page("主题学习", "topics", topics_body, ""), encoding="utf-8")
+    for t in topics:
+        goals_html = "".join(f"<li>{g}</li>" for g in t.get("goals", []))
+        modules_html = ""
+        for mod in t.get("modules", []):
+            modules_html += (
+                '<div class="progress-line"><input type="checkbox" class="check" '
+                f'data-module="{mod["title"]}"><strong>{mod["title"]}</strong></div>'
+                + "".join(f'<p class="muted" style="font-size:12px;margin:2px 0 2px 30px">· {p}</p>'
+                          for p in mod.get("points", [])))
+        quiz_html = ""
+        for i, q in enumerate(t.get("quiz", [])):
+            quiz_html += (
+                '<div class="card" style="margin-top:10px">'
+                f'<p style="font-weight:620">{q["question"]}</p>'
+                + "".join(f'<label class="opt"><input type="radio" name="tq-{i}" value="{o[0]}"> {o}</label>'
+                          for o in q["options"])
+                + f'<p class="muted" data-explain style="font-size:12px;display:none;margin-top:6px">{q["explanation"]}</p>'
+                + "</div>")
+        resources_html = "".join(
+            f'<p style="font-size:13px;margin:5px 0">{r["title"]}'
+            + (f' · <a href="{r["url"]}" target="_blank" rel="noopener">打开</a>' if r.get("url") else "")
+            + "</p>" for r in t.get("resources", []))
+        outputs_html = "".join(f"<li>{o}</li>" for o in t.get("outputs", []))
+        topic_body = (
+            f'<header class="top"><h1>{t["name"]}</h1>'
+            f'<p class="sub">{t["reason"]}</p></header>'
+            f'<div class="card"><h2>目标</h2><ul>{goals_html}</ul></div>'
+            f'<div class="card"><h2>学习模块</h2><div id="topic-modules">{modules_html}</div>'
+            '<p class="muted" id="topic-progress" style="font-size:12px;margin-top:8px"></p></div>'
+            f'<div class="card"><h2>自测</h2><div id="topic-quiz">{quiz_html}</div>'
+            '<div class="btn-row"><button id="topic-quiz-submit" class="btn">提交自测</button></div></div>'
+            f'<div class="card"><h2>输出任务</h2><ul>{outputs_html}</ul>'
+            '<p style="margin-top:8px"><a class="btn ghost" href="../outputs.html">去输出物工作台 →</a></p></div>'
+            f'<div class="card"><h2>推荐资源</h2>{resources_html}</div>'
+            '<div class="card"><h2>AI 助手（DeepSeek）</h2>'
+            '<p class="muted" style="font-size:12px">生成计划、出题、总结进度、答疑</p>'
+            '<div class="btn-row">'
+            '<button id="ai-plan" class="btn">生成学习计划</button>'
+            '<button id="ai-quiz" class="btn ghost">出 5 道自测题</button>'
+            '<button id="ai-summary" class="btn ghost">总结进度</button>'
+            "</div>"
+            '<textarea id="ai-question" rows="3" style="margin-top:10px" placeholder="或直接向 AI 提问…"></textarea>'
+            '<div class="btn-row"><button id="ai-ask" class="btn ghost">提问</button></div>'
+            '<div id="ai-result" class="ai-result"></div></div>'
+        )
+        topic_js = "window.TOPIC = " + json.dumps(t, ensure_ascii=False) + ";"
+        (out / "topics" / f'{t["id"]}.html').write_text(
+            _page(t["name"], "topics", topic_body, topic_js), encoding="utf-8")
+
     (out / "manifest.webmanifest").write_text(json.dumps({
         "name": "AI-PM", "short_name": "AI-PM", "start_url": "./index.html",
         "display": "standalone", "background_color": "#f6f7fb",
@@ -410,7 +481,8 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
 
     sw_assets = ["./", "./index.html", "./learn.html", "./quiz.html", "./cases.html",
                  "./outputs.html", "./project.html", "./mock.html", "./review.html",
-                 "./progress.html", "./manifest.webmanifest", "./assets/app.js", "./assets/style.css"]
+                 "./topics.html", "./progress.html", "./manifest.webmanifest",
+                 "./assets/app.js", "./assets/style.css"]
     sw = ("const CACHE = \"ai-pm-v2\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'

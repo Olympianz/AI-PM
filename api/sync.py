@@ -17,6 +17,7 @@ TABLES = {
     "quiz_answers": ("ai_pm_quiz_answers", "date,quiz_id"),
     "artifacts": ("ai_pm_artifacts", "id"),
     "mocks": ("ai_pm_mocks", "id"),
+    "topic_progress": ("ai_pm_topic_progress", "topic_id"),
 }
 
 

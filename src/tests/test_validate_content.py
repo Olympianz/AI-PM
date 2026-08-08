@@ -16,6 +16,12 @@ def make_fixture(tmp_path):
     (data / "content" / "mock_questions.json").write_text(json.dumps([
         {"id": "m-01", "section": "technical", "question": "Q", "checklist": ["A"]}
     ], ensure_ascii=False), encoding="utf-8")
+    (data / "content" / "topics.json").write_text(json.dumps([
+        {"id": "ux", "name": "UX", "reason": "r", "goals": ["g"],
+         "modules": [{"title": "m", "points": ["p"]}], "resources": [{"title": "t"}],
+         "quiz": [{"question": "q", "options": ["A"], "answer": "A", "explanation": "e"}],
+         "outputs": ["o"]}
+    ], ensure_ascii=False), encoding="utf-8")
     card = ("---\nid: A2-agent-loop\ncapability_id: A2\nminutes: 4\nquiz_ids: [q-001]\n"
             "---\n# Agent Loop\n" + "这是正文。" * 80)
     (data / "content" / "knowledge_cards" / "A2-agent-loop.md").write_text(card, encoding="utf-8")
@@ -54,3 +60,13 @@ def test_validate_reports_mock_missing_question(tmp_path):
         encoding="utf-8")
     errors = validate_content(str(data))
     assert any("mock" in e and "question" in e for e in errors)
+
+
+def test_validate_reports_topic_missing_goals(tmp_path):
+    data = make_fixture(tmp_path)
+    (data / "content" / "topics.json").write_text(json.dumps([
+        {"id": "ux", "name": "UX", "reason": "r", "modules": [],
+         "resources": [], "quiz": [], "outputs": []}], ensure_ascii=False),
+        encoding="utf-8")
+    errors = validate_content(str(data))
+    assert any("topic" in e and "goals" in e for e in errors)

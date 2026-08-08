@@ -68,4 +68,19 @@ def validate_content(data_dir: str) -> List[str]:
             errors.append(f"mock:{m.get('id')} 缺少 question")
         if not m.get("checklist"):
             errors.append(f"mock:{m.get('id')} checklist 不能为空")
+    topics = json.loads((data / "content" / "topics.json").read_text(encoding="utf-8"))
+    for t in topics:
+        tid = t.get("id", "?")
+        for field in ("id", "name", "reason", "goals", "modules", "resources", "quiz", "outputs"):
+            if not t.get(field):
+                errors.append(f"topic:{tid} 缺少字段 {field}")
+        if not t.get("goals") or not isinstance(t["goals"], list):
+            errors.append(f"topic:{tid} goals 必须为非空列表")
+        for mod in t.get("modules", []):
+            if not mod.get("title") or not mod.get("points"):
+                errors.append(f"topic:{tid} 模块缺少 title 或 points")
+        for q in t.get("quiz", []):
+            for field in ("question", "options", "answer", "explanation"):
+                if not q.get(field):
+                    errors.append(f"topic:{tid} quiz 缺少字段 {field}")
     return errors

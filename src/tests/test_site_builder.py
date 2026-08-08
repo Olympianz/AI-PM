@@ -30,6 +30,12 @@ def make_fixture(tmp_path):
     for name in ("prd", "case_analysis", "answer_card"):
         (data / "content" / "output_templates" / f"{name}.md").write_text(
             f"# {name} 模板", encoding="utf-8")
+    (data / "content" / "topics.json").write_text(json.dumps([
+        {"id": "ux", "name": "用户体验设计", "reason": "r", "goals": ["g"],
+         "modules": [{"title": "m", "points": ["p"]}], "resources": [{"title": "t"}],
+         "quiz": [{"question": "q", "options": ["A"], "answer": "A", "explanation": "e"}],
+         "outputs": ["o"]}
+    ], ensure_ascii=False), encoding="utf-8")
     card = "---\nid: A2\ncapability_id: A2\nminutes: 4\nquiz_ids: [q-001]\n---\n# Agent Loop\n正文内容"
     (data / "content" / "knowledge_cards" / "A2.md").write_text(card, encoding="utf-8")
     return data
@@ -54,6 +60,8 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "project.html" in written
     assert "mock.html" in written
     assert "review.html" in written
+    assert "topics.html" in written
+    assert "topics/ux.html" in written
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
@@ -68,6 +76,9 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "Agent Loop" in mock_page
     review_page = (out / "review.html").read_text(encoding="utf-8")
     assert "BASELINE" in review_page
+    topics_page = (out / "topics" / "ux.html").read_text(encoding="utf-8")
+    assert "用户体验设计" in topics_page
+    assert "window.TOPIC" in topics_page
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
