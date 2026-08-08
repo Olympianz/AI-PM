@@ -1,0 +1,5 @@
+{
+  "behavioral": {"checklist": ["STAR", "结果", "数据", "反思"]},
+  "case": {"checklist": ["指标", "权衡", "优先级", "风险"]},
+  "technical": {"checklist": ["RAG", "Agent", "评估", "成本", "边界"]}
+}
