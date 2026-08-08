@@ -20,10 +20,11 @@ TABLES = {
 }
 
 
-def _rest(table, method="GET", payload=None):
+def _rest(key, method="GET", payload=None):
+    table, conflict = TABLES[key]
     path = f"/rest/v1/{table}"
     if method == "POST":
-        path += f"?on_conflict={TABLES[table][1]}"
+        path += f"?on_conflict={conflict}"
     req = urllib.request.Request(
         SUPABASE_URL + path,
         data=json.dumps(payload).encode() if payload is not None else None,
@@ -57,8 +58,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             out = {}
-            for key, (table, _) in TABLES.items():
-                rows = _rest(table) or []
+            for key in TABLES:
+                rows = _rest(key) or []
                 out[key] = rows
             self._send(200, out)
         except Exception as e:  # noqa: BLE001
@@ -69,9 +70,9 @@ class handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(n).decode() or "{}")
             saved = {key: 0 for key in TABLES}
-            for key, (table, _) in TABLES.items():
+            for key in TABLES:
                 for rec in payload.get(key, []):
-                    _rest(table, "POST", rec)
+                    _rest(key, "POST", rec)
                     saved[key] += 1
             self._send(200, {"saved": saved})
         except Exception as e:  # noqa: BLE001
