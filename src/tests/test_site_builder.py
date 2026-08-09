@@ -65,7 +65,7 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
-    assert "./learn.html" in index
+    assert "/learn.html" in index
     quiz = (out / "quiz.html").read_text(encoding="utf-8")
     assert "q-001" in quiz
     learn = (out / "learn.html").read_text(encoding="utf-8")

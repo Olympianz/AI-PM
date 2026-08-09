@@ -132,7 +132,7 @@ def _nav(active: str) -> str:
     for key, label, ico in tabs:
         cls = "active" if key == active else ""
         cls_attr = f' class="{cls}{" desk-only" if key in ("outputs", "project", "mock", "review") else ""}"'
-        items.append(f'<a href="./{key}.html"{cls_attr}><span class="n-ico">{ico}</span>{label}</a>')
+        items.append(f'<a href="/{key}.html"{cls_attr}><span class="n-ico">{ico}</span>{label}</a>')
     return '<nav class="bottom">' + "".join(items) + "</nav>"
 
 
@@ -140,14 +140,14 @@ def _page(title: str, active: str, body: str, extra_js: str = "") -> str:
     return (
         '<!doctype html><html lang="zh"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<link rel="manifest" href="./manifest.webmanifest">'
-        '<link rel="stylesheet" href="./assets/style.css">'
+        '<link rel="manifest" href="/manifest.webmanifest">'
+        '<link rel="stylesheet" href="/assets/style.css">'
         f"<title>{title}</title></head><body>"
         f'<div class="wrap">{body}</div>'
         f"{_nav(active)}"
         f'<script>window.PAGE="{active}";</script>'
         f"<script>{extra_js}</script>"
-        '<script src="./assets/app.js"></script>'
+        '<script src="/assets/app.js"></script>'
         "</body></html>"
     )
 
@@ -196,15 +196,15 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<button id="checkin-btn" class="btn">打卡</button></div></div>'
         '<div class="card"><h2 id="task-head">今日任务</h2><div id="task-list"></div></div>'
         '<div class="grid2">'
-        '<a class="entry" href="./learn.html"><div class="e-ico">📚</div><div class="e-title">知识卡</div>'
+        '<a class="entry" href="/learn.html"><div class="e-ico">📚</div><div class="e-title">知识卡</div>'
         '<div class="e-meta">12 张 · 每张 ≤5 分钟</div></a>'
-        '<a class="entry" href="./quiz.html"><div class="e-ico">✏️</div><div class="e-title">快速自测</div>'
+        '<a class="entry" href="/quiz.html"><div class="e-ico">✏️</div><div class="e-title">快速自测</div>'
         '<div class="e-meta">21 题 · 即答即反馈</div></a>'
-        '<a class="entry" href="./cases.html"><div class="e-ico">🗂</div><div class="e-title">案例拆解</div>'
+        '<a class="entry" href="/cases.html"><div class="e-ico">🗂</div><div class="e-title">案例拆解</div>'
         '<div class="e-meta">2 个 · 通勤版摘要</div></a>'
-        '<a class="entry" href="./topics.html"><div class="e-ico">🎯</div><div class="e-title">专题学习</div>'
+        '<a class="entry" href="/topics.html"><div class="e-ico">🎯</div><div class="e-title">专题学习</div>'
         '<div class="e-meta">UX · A/B 测试 · AI 辅助</div></a>'
-        '<a class="entry" href="./progress.html"><div class="e-ico">📈</div><div class="e-title">进度</div>'
+        '<a class="entry" href="/progress.html"><div class="e-ico">📈</div><div class="e-title">进度</div>'
         '<div class="e-meta">打卡 · 掌握度</div></a>'
         "</div>"
         '<div class="card"><h2>数据同步</h2>'
@@ -226,7 +226,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         cap = meta.get("capability_id", "")
         cap_label = cap_names_dict.get(cap, "")
         card_items.append(
-            f'<a class="task" href="./cards/{meta["id"]}.html">'
+            f'<a class="task" href="/cards/{meta["id"]}.html">'
             f'<span class="t-ico">📄</span>'
             f'<span class="t-main"><span class="t-title">{title}</span>'
             f'<span class="t-meta">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</span></span>'
@@ -249,7 +249,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             '<header class="top"><h1>知识卡</h1>'
             f'<p class="sub">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</p></header>'
             f'<div class="card prose">{_md_to_html(body)}</div>'
-            '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="../learn.html">← 返回知识卡</a></p>'
+            '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="/learn.html">← 返回知识卡</a></p>'
         )
         card_js = f'window.CARD_ID = "{meta["id"]}";'
         (out / "cards" / f'{meta["id"]}.html').write_text(
@@ -274,7 +274,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     for c in cases:
         caps = " · ".join(cap_names_dict.get(cid, cid) for cid in c.get("capability_ids", []))
         case_links.append(
-            f'<a class="task" href="./cases/{c["id"]}.html">'
+            f'<a class="task" href="/cases/{c["id"]}.html">'
             '<span class="t-ico">🗂</span>'
             f'<span class="t-main"><span class="t-title">{c.get("title", c["id"])}</span>'
             f'<span class="t-meta">{caps}</span></span>'
@@ -296,7 +296,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             f'<div class="card prose"><h2>通勤版摘要</h2>{_md_to_html(c.get("summary", ""))}</div>'
             f'<div class="card prose"><h2>面试问题</h2><p>{c["question"]}</p></div>'
             f'<div class="card prose"><h2>答题提示</h2><ul>{tips}</ul></div>'
-            '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="./cases.html">← 返回案例列表</a></p>'
+            '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="/cases.html">← 返回案例列表</a></p>'
         )
         (out / "cases" / f'{c["id"]}.html').write_text(_page("案例拆解", "cases", body, cases_js), encoding="utf-8")
 
@@ -414,7 +414,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     topic_cards = []
     for t in topics:
         topic_cards.append(
-            f'<a class="task" href="./topics/{t["id"]}.html">'
+            f'<a class="task" href="/topics/{t["id"]}.html">'
             '<span class="t-ico">🎯</span>'
             f'<span class="t-main"><span class="t-title">{t["name"]}</span>'
             f'<span class="t-meta">{t["reason"]}</span></span>'
@@ -457,7 +457,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             f'<div class="card"><h2>自测</h2><div id="topic-quiz">{quiz_html}</div>'
             '<div class="btn-row"><button id="topic-quiz-submit" class="btn">提交自测</button></div></div>'
             f'<div class="card"><h2>输出任务</h2><ul>{outputs_html}</ul>'
-            '<p style="margin-top:8px"><a class="btn ghost" href="../outputs.html">去输出物工作台 →</a></p></div>'
+            '<p style="margin-top:8px"><a class="btn ghost" href="/outputs.html">去输出物工作台 →</a></p></div>'
             f'<div class="card"><h2>推荐资源</h2>{resources_html}</div>'
             '<div class="card"><h2>AI 助手（DeepSeek）</h2>'
             '<p class="muted" style="font-size:12px">生成计划、出题、总结进度、答疑</p>'
@@ -475,14 +475,14 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             _page(t["name"], "topics", topic_body, topic_js), encoding="utf-8")
 
     (out / "manifest.webmanifest").write_text(json.dumps({
-        "name": "AI-PM", "short_name": "AI-PM", "start_url": "./index.html",
+        "name": "AI-PM", "short_name": "AI-PM", "start_url": "/index.html",
         "display": "standalone", "background_color": "#f6f7fb",
         "theme_color": "#f6f7fb", "icons": []}, ensure_ascii=False), encoding="utf-8")
 
-    sw_assets = ["./", "./index.html", "./learn.html", "./quiz.html", "./cases.html",
-                 "./outputs.html", "./project.html", "./mock.html", "./review.html",
-                 "./topics.html", "./progress.html", "./manifest.webmanifest",
-                 "./assets/app.js", "./assets/style.css"]
+    sw_assets = ["/", "/index.html", "/learn.html", "/quiz.html", "/cases.html",
+                 "/outputs.html", "/project.html", "/mock.html", "/review.html",
+                 "/topics.html", "/progress.html", "/manifest.webmanifest",
+                 "/assets/app.js", "/assets/style.css"]
     sw = ("const CACHE = \"ai-pm-v2\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'

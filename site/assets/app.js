@@ -49,7 +49,7 @@
         return { topic_id: tid, data: state.topic_progress[tid] };
       })
     };
-    return fetch("./api/sync", {
+    return fetch("/api/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -57,7 +57,7 @@
   }
 
   function cloudPull() {
-    return fetch("./api/sync")
+    return fetch("/api/sync")
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var state = load();
@@ -143,13 +143,13 @@
   function taskLink(t) {
     var cap0 = (t.capability_ids || [])[0] || "";
     var desktop = window.innerWidth >= 900;
-    if (t.type === "input") { return "./cards/" + cap0 + ".html"; }
-    if (t.type === "practice") { return "./quiz.html#cap-" + cap0; }
-    if (t.type === "case") { return "./cases.html"; }
-    if (desktop && t.type === "output") { return "./outputs.html"; }
-    if (desktop && t.type === "project") { return "./project.html"; }
-    if (desktop && t.type === "mock") { return "./mock.html"; }
-    if (desktop && t.type === "review") { return "./review.html"; }
+    if (t.type === "input") { return "/cards/" + cap0 + ".html"; }
+    if (t.type === "practice") { return "/quiz.html#cap-" + cap0; }
+    if (t.type === "case") { return "/cases.html"; }
+    if (desktop && t.type === "output") { return "/outputs.html"; }
+    if (desktop && t.type === "project") { return "/project.html"; }
+    if (desktop && t.type === "mock") { return "/mock.html"; }
+    if (desktop && t.type === "review") { return "/review.html"; }
     return null;
   }
   function taskTitle(t) {
@@ -689,7 +689,7 @@
 
   function aiCall(action, question) {
     var topic = window.TOPIC || {};
-    return fetch("./api/ai", {
+    return fetch("/api/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -811,4 +811,7 @@
   renderTopic();
   renderCloudSync();
   cloudPull().catch(function () { /* 本地环境无 API，静默 */ });
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(function () { /* 静默 */ });
+  }
 })();
