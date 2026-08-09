@@ -37,6 +37,7 @@ nav.bottom .n-ico{display:block;font-size:17px;line-height:1.25}
 .filters::-webkit-scrollbar{display:none}
 .filters .chip{cursor:pointer;user-select:none;padding:5px 12px;font-size:12px;flex:0 0 auto;white-space:nowrap}
 .filters .chip.on{background:var(--accent);color:#fff}
+.chip.ghost-btn{background:transparent;border:1px solid var(--accent)}
 .opt{display:block;margin:8px 0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}
 .opt.correct{background:#e8f7ee;border-color:var(--ok);font-weight:650}
 .opt.wrong{background:#fdecec;border-color:#dc2626;font-weight:650}

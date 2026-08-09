@@ -96,6 +96,7 @@ nav.bottom .n-ico{display:block;font-size:17px;line-height:1.25}
 .filters::-webkit-scrollbar{display:none}
 .filters .chip{cursor:pointer;user-select:none;padding:5px 12px;font-size:12px;flex:0 0 auto;white-space:nowrap}
 .filters .chip.on{background:var(--accent);color:#fff}
+.chip.ghost-btn{background:transparent;border:1px solid var(--accent)}
 .opt{display:block;margin:8px 0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}
 .opt.correct{background:#e8f7ee;border-color:var(--ok);font-weight:650}
 .opt.wrong{background:#fdecec;border-color:#dc2626;font-weight:650}
@@ -268,11 +269,14 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     all_chips = ('<span class="chip on" data-cap="">全部</span>'
                  + "".join(f'<span class="chip" data-cap="{c}">{cap_names_dict.get(c, c)}</span>'
                            for c in cap_order))
+    bar_chips = ('<span class="chip on" data-cap="">全部</span>'
+                 + "".join(f'<span class="chip" data-cap="{c}">{cap_names_dict.get(c, c)}</span>'
+                           for c in cap_order[:3])
+                 + '<span class="chip ghost-btn" id="open-tags">全部 ▾</span>')
     quiz_body = (
         '<header class="top"><h1>快速自测</h1>'
         '<p class="sub">选择答案后提交，即时查看反馈</p></header>'
-        f'<div class="filters" id="filters">{all_chips}'
-        '<span class="chip" id="open-tags">全部标签 ▾</span></div>'
+        f'<div class="filters" id="filters">{bar_chips}</div>'
         f'<div class="modal" id="tag-modal"><div class="sheet">'
         '<h2 style="font-size:16px;font-weight:700">选择分类</h2>'
         f'<div class="tag-grid" id="tag-grid">{all_chips}</div>'

@@ -275,48 +275,57 @@
     var done = {};
     state.quiz_answers.forEach(function (a) { done[a.quiz_id] = true; });
 
-    var chips = {};
-    var containers = [filters];
-    var tagGrid = document.getElementById("tag-grid");
-    if (tagGrid) { containers.push(tagGrid); }
-    containers.forEach(function (container) {
-      container.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
-        (chips[chip.dataset.cap] = chips[chip.dataset.cap] || []).push(chip);
-        if (!window.__quizChipsBound) {
-          chip.addEventListener("click", function () {
-            setFilter(chip.dataset.cap || "");
-            if (tagModal && tagModal.classList.contains("open")) {
-              tagModal.classList.remove("open");
-            }
-          });
-        }
-      });
+    var capOrder = [];
+    window.QUIZ_BANK.forEach(function (q) {
+      if (capOrder.indexOf(q.capability_id) === -1) { capOrder.push(q.capability_id); }
     });
-    window.__quizChipsBound = true;
-    function setFilter(c) {
-      containers.forEach(function (container) {
-        container.querySelectorAll(".chip[data-cap]").forEach(function (x) {
-          x.classList.toggle("on", x.dataset.cap === c);
+    function renderBar(cap) {
+      var visible = cap ? ["", cap] : ["", capOrder[0], capOrder[1], capOrder[2]];
+      filters.innerHTML = visible.map(function (c) {
+        return '<span class="chip' + (c === (cap || "") ? " on" : "") +
+          '" data-cap="' + c + '">' + (c ? capName(c) : "全部") + "</span>";
+      }).join("") + '<span class="chip ghost-btn" id="open-tags">全部 ▾</span>';
+      filters.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          setFilter(chip.dataset.cap || "");
         });
       });
+      document.getElementById("open-tags").addEventListener("click", function () {
+        if (tagModal) { tagModal.classList.add("open"); }
+      });
+    }
+    var tagGrid = document.getElementById("tag-grid");
+    if (tagGrid && !window.__quizChipsBound) {
+      tagGrid.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          setFilter(chip.dataset.cap || "");
+          if (tagModal) { tagModal.classList.remove("open"); }
+        });
+      });
+      window.__quizChipsBound = true;
+    }
+    function setFilter(c) {
+      if (tagGrid) {
+        tagGrid.querySelectorAll(".chip[data-cap]").forEach(function (x) {
+          x.classList.toggle("on", x.dataset.cap === c);
+        });
+      }
       root.querySelectorAll(".quiz-group").forEach(function (sec) {
         sec.style.display = (!c || sec.dataset.cap === c) ? "" : "none";
       });
+      renderBar(c);
     }
-    var openTags = document.getElementById("open-tags");
-    if (openTags && tagModal) {
-      openTags.addEventListener("click", function () {
-        tagModal.classList.add("open");
-      });
+    if (tagModal && !window.__quizModalBound) {
       tagModal.addEventListener("click", function (e) {
         if (e.target === tagModal) { tagModal.classList.remove("open"); }
       });
-    }
-    var closeTags = document.getElementById("close-tags");
-    if (closeTags && tagModal) {
-      closeTags.addEventListener("click", function () {
-        tagModal.classList.remove("open");
-      });
+      var closeTags = document.getElementById("close-tags");
+      if (closeTags) {
+        closeTags.addEventListener("click", function () {
+          tagModal.classList.remove("open");
+        });
+      }
+      window.__quizModalBound = true;
     }
 
     var groups = {};
@@ -366,7 +375,7 @@
     };
 
     var hashCap = (location.hash || "").replace("#cap-", "");
-    if (hashCap && chips[hashCap]) { setFilter(hashCap); }
+    if (hashCap && capOrder.indexOf(hashCap) !== -1) { setFilter(hashCap); }
   }
 
   function markCardRead() {
