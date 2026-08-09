@@ -247,6 +247,17 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     (out / "learn.html").write_text(_page("知识卡", "learn", learn_body, learn_js), encoding="utf-8")
 
     # ---- cards/<id>.html（知识卡详情）----
+    all_cards = sorted(p.stem for p in (data / "content" / "knowledge_cards").glob("*.md"))
+    card_plan = {}
+    for date, tasks in plan_tasks.items():
+        seen = []
+        for t in tasks:
+            if t["type"] in ("input", "practice"):
+                for c in t.get("capability_ids", []):
+                    if c not in seen:
+                        seen.append(c)
+        if seen:
+            card_plan[date] = seen
     for md in sorted((data / "content" / "knowledge_cards").glob("*.md")):
         meta, body = _front_matter(md.read_text(encoding="utf-8"))
         title = _card_title(body) or meta.get("capability_id", md.stem)
@@ -255,9 +266,12 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             '<header class="top"><h1>知识卡</h1>'
             f'<p class="sub">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</p></header>'
             f'<div class="card prose">{_md_to_html(body)}</div>'
+            '<div class="card" id="card-nav" style="margin-top:14px"></div>'
             '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="/learn.html">← 返回知识卡</a></p>'
         )
-        card_js = f'window.CARD_ID = "{meta["id"]}";'
+        card_js = (f'window.CARD_ID = "{meta["id"]}";'
+                   f"window.CARD_PLAN = {json.dumps(card_plan, ensure_ascii=False)};"
+                   f"window.ALL_CARDS = {json.dumps(all_cards)};")
         (out / "cards" / f'{meta["id"]}.html').write_text(
             _page(title, "learn", card_html, card_js), encoding="utf-8")
 
@@ -507,7 +521,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  "/outputs.html", "/project.html", "/mock.html", "/review.html",
                  "/topics.html", "/progress.html", "/manifest.webmanifest",
                  "/assets/app.js", "/assets/style.css"]
-    sw = ("const CACHE = \"ai-pm-v5\";\n"
+    sw = ("const CACHE = \"ai-pm-v6\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'
           "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));\n"

@@ -902,6 +902,52 @@
     updateProgress();
   }
 
+  function renderCardNav() {
+    var nav = document.getElementById("card-nav");
+    if (!nav || !window.CARD_ID) { return; }
+    var today = todayISO();
+    var keys = Object.keys(window.CARD_PLAN || {}).sort();
+    var pick = (window.CARD_PLAN && window.CARD_PLAN[today]) ? today : null;
+    if (!pick) {
+      pick = keys.filter(function (k) { return k > today; })[0] || keys[0];
+    }
+    var queue = (pick && window.CARD_PLAN && window.CARD_PLAN[pick]) || [];
+    if (queue.indexOf(window.CARD_ID) === -1) {
+      queue = window.ALL_CARDS || [window.CARD_ID];
+    }
+    var idx = queue.indexOf(window.CARD_ID);
+    if (idx === -1) { nav.innerHTML = ""; return; }
+    var prev = idx > 0 ? queue[idx - 1] : null;
+    var next = idx < queue.length - 1 ? queue[idx + 1] : null;
+    var html =
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+      (prev
+        ? '<a class="btn ghost" href="/cards/' + prev + '.html" style="font-size:13px;padding:9px 14px">‹ 上一张</a>'
+        : '<span></span>') +
+      '<span class="muted" style="font-size:12px">第 ' + (idx + 1) + " / " + queue.length + " 张</span>" +
+      (next
+        ? '<a class="btn" href="/cards/' + next + '.html" style="font-size:13px;padding:9px 14px">下一张 ›</a>'
+        : '<a class="btn" href="/quiz.html" style="font-size:13px;padding:9px 14px">今日自测 →</a>') +
+      "</div>";
+    nav.innerHTML = html;
+    if (!window.__cardSwipeBound) {
+      var startX = 0, startY = 0;
+      document.addEventListener("touchstart", function (e) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener("touchend", function (e) {
+        var dx = e.changedTouches[0].clientX - startX;
+        var dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0 && next) { location.href = "/cards/" + next + ".html"; }
+          else if (dx > 0 && prev) { location.href = "/cards/" + prev + ".html"; }
+        }
+      }, { passive: true });
+      window.__cardSwipeBound = true;
+    }
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   function renderAll() {
@@ -914,6 +960,7 @@
     renderMock();
     renderReview();
     renderTopic();
+    renderCardNav();
   }
   renderAll();
   markCardRead();
