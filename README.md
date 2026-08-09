@@ -13,7 +13,7 @@
 
 1. 本地生成站点：`python3 scripts/build_site.py --data data --out site`；本地预览 `python3 -m http.server 8765 --directory site`
 2. 线上部署：根目录配置了 `vercel.json`（`/` 路由到 `site/`，`/api/*` 走 serverless）与 `api/sync.py`（Supabase 云同步）。`vercel deploy --prod --yes` 即可发布。
-3. 云端数据：`ai_pm_checkins / ai_pm_quiz_answers / ai_pm_artifacts / ai_pm_mocks / ai_pm_topic_progress / ai_pm_tasks / ai_pm_read_cards` 七张表，由 `api/sync.py` 用 service role key 读写（密钥只在服务端环境变量中）。
+3. 云端数据：`ai_pm_checkins / ai_pm_quiz_answers / ai_pm_artifacts / ai_pm_mocks / ai_pm_topic_progress / ai_pm_tasks / ai_pm_read_cards / ai_pm_bookmarks` 八张表，由 `api/sync.py` 用 service role key 读写（密钥只在服务端环境变量中）。
 4. 前端同步：打开首页点击「☁ 云端同步」上传本机数据；每次加载自动从云端拉取合并（在线时）。离线场景仍可用「导出文件」+ `scripts/sync_import.py` 回传。
 5. 每日打卡：`python3 scripts/checkin.py --date <日期> --minutes <分钟> --task <任务id>`
 

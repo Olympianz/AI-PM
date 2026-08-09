@@ -48,3 +48,8 @@ create table if not exists public.ai_pm_read_cards (
   card_id text primary key,
   read_at text
 );
+
+create table if not exists public.ai_pm_bookmarks (
+  card_id    text primary key,
+  created_at text
+);
