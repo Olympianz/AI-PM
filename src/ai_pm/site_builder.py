@@ -70,6 +70,7 @@ header.top .sub{color:var(--muted);font-size:13px;margin-top:3px}
 .chip.ok{background:#e8f7ee;color:var(--ok)}
 .btn{display:inline-block;border:0;border-radius:99px;padding:11px 20px;font-size:14px;font-weight:650;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;text-align:center}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.ghost.on{background:var(--warn);color:#fff;border-color:var(--warn)}
 .btn[disabled]{opacity:.55;cursor:default}
 .task{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
 .task:last-of-type{border-bottom:0}
@@ -112,6 +113,7 @@ pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-
 .ai-result{background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-top:10px;display:none;max-height:420px;overflow:auto}
 .ai-result.show{display:block}
 .progress-line{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.t-star{color:var(--warn);font-weight:700}
 .tag-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .modal{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}
 .modal.open{display:flex}
@@ -232,7 +234,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         cap = meta.get("capability_id", "")
         cap_label = cap_names_dict.get(cap, "")
         card_items.append(
-            f'<a class="task" href="/cards/{meta["id"]}.html">'
+            f'<a class="task" data-card="{meta["id"]}" href="/cards/{meta["id"]}.html">'
             f'<span class="t-ico">📄</span>'
             f'<span class="t-main"><span class="t-title">{title}</span>'
             f'<span class="t-meta">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</span></span>'
@@ -240,6 +242,10 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     learn_body = (
         '<header class="top"><h1>知识卡</h1>'
         '<p class="sub">碎片时间输入 · 每张 ≤5 分钟</p></header>'
+        '<div class="filters" id="learn-filters">'
+        '<span class="chip on" data-f="all">全部</span>'
+        '<span class="chip" data-f="fav">⭐ 收藏</span>'
+        "</div>"
         '<div class="card" id="card-list">' + "".join(card_items) + "</div>"
         '<footer class="hint">已读卡片会在进度页统计</footer>'
     )
@@ -265,6 +271,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         card_html = (
             '<header class="top"><h1>知识卡</h1>'
             f'<p class="sub">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</p></header>'
+            '<p style="margin-top:12px"><button id="bookmark-btn" class="btn ghost">☆ 收藏</button></p>'
             f'<div class="card prose">{_md_to_html(body)}</div>'
             '<div class="card" id="card-nav" style="margin-top:14px"></div>'
             '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="/learn.html">← 返回知识卡</a></p>'
@@ -521,7 +528,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  "/outputs.html", "/project.html", "/mock.html", "/review.html",
                  "/topics.html", "/progress.html", "/manifest.webmanifest",
                  "/assets/app.js", "/assets/style.css"]
-    sw = ("const CACHE = \"ai-pm-v6\";\n"
+    sw = ("const CACHE = \"ai-pm-v7\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'
           "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));\n"

@@ -20,6 +20,7 @@ TABLES = {
     "topic_progress": ("ai_pm_topic_progress", "topic_id"),
     "tasks": ("ai_pm_tasks", "date,task_id"),
     "read_cards": ("ai_pm_read_cards", "card_id"),
+    "bookmarks": ("ai_pm_bookmarks", "card_id"),
 }
 DELETE_TABLES = ("artifacts", "mocks")
 

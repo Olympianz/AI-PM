@@ -74,9 +74,12 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert 'class="chip ghost-btn" id="open-tags"' in quiz
     learn = (out / "learn.html").read_text(encoding="utf-8")
     assert "cards/A2.html" in learn
+    assert 'id="learn-filters"' in learn
+    assert 'data-card="A2"' in learn
     card_page = (out / "cards" / "A2.html").read_text(encoding="utf-8")
     assert 'id="card-nav"' in card_page
     assert "CARD_PLAN" in card_page
+    assert 'id="bookmark-btn"' in card_page
     case_page = (out / "cases" / "c-001.html").read_text(encoding="utf-8")
     assert "客服" in case_page
     mock_page = (out / "mock.html").read_text(encoding="utf-8")
@@ -89,5 +92,5 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
-    assert "ai-pm-v6" in sw
+    assert "ai-pm-v7" in sw
     assert "learn.html" in sw

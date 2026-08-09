@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/assets/style.css"><title>边界条件与失败场景感知</title></head><body><div class="wrap"><header class="top"><h1>知识卡</h1><p class="sub">边界条件与失败场景感知 · 约 4 分钟</p></header><div class="card prose"><h2>边界条件与失败场景感知</h2>
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/assets/style.css"><title>边界条件与失败场景感知</title></head><body><div class="wrap"><header class="top"><h1>知识卡</h1><p class="sub">边界条件与失败场景感知 · 约 4 分钟</p></header><p style="margin-top:12px"><button id="bookmark-btn" class="btn ghost">☆ 收藏</button></p><div class="card prose"><h2>边界条件与失败场景感知</h2>
 <p>AI 产品的质量口碑往往由失败场景决定：一次离谱的错误回答，比十次正确回答更让人记住。对异常分支、边界条件和失败场景的敏感度，是资深 PM 与初级 PM 的分水岭。</p>
 <p>系统化排查失败场景：1）输入边界——空输入、超长输入、敏感内容、多语言混用；2）执行边界——工具超时、权限不足、网络中断、并发冲突；3）输出边界——模型拒绝、幻觉、格式错误、成本超限。</p>
 <p>处理策略统一为：兜底（给用户可用的替代结果）、降级（降低能力但不中断服务）、重试（自动或手动）、透明（告诉用户发生了什么）。</p>

@@ -67,6 +67,9 @@
       }),
       tasks: tasksPayload(state),
       read_cards: readCardsPayload(state),
+      bookmarks: (state.bookmarks || []).map(function (id) {
+        return { card_id: id, created_at: todayISO() };
+      }),
       _delete: state._deleted || {}
     };
     return fetch("/api/sync", {
@@ -88,6 +91,7 @@
         state.topic_progress = state.topic_progress || {};
         state.tasks = state.tasks || {};
         state.read_cards = state.read_cards || {};
+        state.bookmarks = state.bookmarks || [];
         state._deleted = { artifacts: [], mocks: [] };
         (data.checkins || []).forEach(function (c) {
           if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
@@ -118,6 +122,7 @@
         (data.read_cards || []).forEach(function (r) {
           state.read_cards[r.card_id] = true;
         });
+        state.bookmarks = (data.bookmarks || []).map(function (b) { return b.card_id; });
         save(state);
         return state;
       });
@@ -948,6 +953,66 @@
     }
   }
 
+  function renderCardBookmark() {
+    var btn = document.getElementById("bookmark-btn");
+    if (!btn || !window.CARD_ID) { return; }
+    var state = load();
+    state.bookmarks = state.bookmarks || [];
+    function paint() {
+      var isFav = state.bookmarks.indexOf(window.CARD_ID) !== -1;
+      btn.textContent = isFav ? "★ 已收藏" : "☆ 收藏";
+      btn.classList.toggle("on", isFav);
+      return isFav;
+    }
+    btn.onclick = function () {
+      var idx = state.bookmarks.indexOf(window.CARD_ID);
+      if (idx === -1) { state.bookmarks.push(window.CARD_ID); }
+      else { state.bookmarks.splice(idx, 1); }
+      save(state);
+      queueSync();
+      paint();
+    };
+    paint();
+  }
+
+  function renderLearnBookmarks() {
+    var list = document.getElementById("card-list");
+    var filters = document.getElementById("learn-filters");
+    if (!list || !filters) { return; }
+    function favsOf() {
+      var s = load();
+      s.bookmarks = s.bookmarks || [];
+      var o = {};
+      s.bookmarks.forEach(function (id) { o[id] = true; });
+      return o;
+    }
+    function paint(favs) {
+      list.querySelectorAll(".task[data-card]").forEach(function (row) {
+        var star = row.querySelector(".t-star");
+        if (!star) {
+          star = document.createElement("span");
+          star.className = "t-star";
+          star.style.marginLeft = "6px";
+          var title = row.querySelector(".t-title");
+          if (title) { title.appendChild(star); }
+        }
+        star.textContent = favs[row.dataset.card] ? "★" : "";
+      });
+    }
+    paint(favsOf());
+    filters.querySelectorAll(".chip[data-f]").forEach(function (chip) {
+      chip.onclick = function () {
+        filters.querySelectorAll(".chip[data-f]").forEach(function (x) { x.classList.remove("on"); });
+        chip.classList.add("on");
+        var f = chip.dataset.f;
+        var favs = favsOf();
+        list.querySelectorAll(".task[data-card]").forEach(function (row) {
+          row.style.display = (f === "all" || favs[row.dataset.card]) ? "" : "none";
+        });
+      };
+    });
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   function renderAll() {
@@ -961,6 +1026,8 @@
     renderReview();
     renderTopic();
     renderCardNav();
+    renderCardBookmark();
+    renderLearnBookmarks();
   }
   renderAll();
   markCardRead();

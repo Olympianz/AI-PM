@@ -11,6 +11,7 @@ header.top .sub{color:var(--muted);font-size:13px;margin-top:3px}
 .chip.ok{background:#e8f7ee;color:var(--ok)}
 .btn{display:inline-block;border:0;border-radius:99px;padding:11px 20px;font-size:14px;font-weight:650;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;text-align:center}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.ghost.on{background:var(--warn);color:#fff;border-color:var(--warn)}
 .btn[disabled]{opacity:.55;cursor:default}
 .task{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
 .task:last-of-type{border-bottom:0}
@@ -53,6 +54,7 @@ pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-
 .ai-result{background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-top:10px;display:none;max-height:420px;overflow:auto}
 .ai-result.show{display:block}
 .progress-line{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.t-star{color:var(--warn);font-weight:700}
 .tag-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .modal{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}
 .modal.open{display:flex}
