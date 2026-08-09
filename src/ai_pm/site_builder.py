@@ -92,8 +92,9 @@ nav.bottom .n-ico{display:block;font-size:17px;line-height:1.25}
 .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 10px;text-align:center}
 .stat .v{font-size:20px;font-weight:750;color:var(--accent)}
 .stat .k{font-size:11.5px;color:var(--muted);margin-top:2px}
-.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;margin-top:12px}
-.filters .chip{cursor:pointer;user-select:none;padding:5px 12px;font-size:12px}
+.filters{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;padding:4px 0 8px;margin-top:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters .chip{cursor:pointer;user-select:none;padding:5px 12px;font-size:12px;flex:0 0 auto;white-space:nowrap}
 .filters .chip.on{background:var(--accent);color:#fff}
 .opt{display:block;margin:8px 0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}
 .opt.correct{background:#e8f7ee;border-color:var(--ok);font-weight:650}
@@ -208,7 +209,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<div class="e-meta">打卡 · 掌握度</div></a>'
         "</div>"
         '<div class="card"><h2>数据同步</h2>'
-        '<p class="muted" style="font-size:12px">答题与打卡保存在本机；导出文件后可合并回本地跟踪。</p>'
+        '<p class="muted" style="font-size:12px">所有学习数据自动同步到 Supabase 云端；本机只保留离线缓存。</p>'
         '<div class="btn-row">'
         '<button id="cloud-sync" class="btn">☁ 云端同步</button>'
         '<button id="export-sync" class="btn ghost">导出文件</button>'
@@ -256,10 +257,17 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             _page(title, "learn", card_html, card_js), encoding="utf-8")
 
     # ---- quiz.html（按能力分组 + 过滤）----
+    cap_order = []
+    for q in bank:
+        if q["capability_id"] not in cap_order:
+            cap_order.append(q["capability_id"])
+    quiz_chips = ('<span class="chip on" data-cap="">全部</span>'
+                  + "".join(f'<span class="chip" data-cap="{c}">{cap_names_dict.get(c, c)}</span>'
+                            for c in cap_order))
     quiz_body = (
         '<header class="top"><h1>快速自测</h1>'
         '<p class="sub">选择答案后提交，即时查看反馈</p></header>'
-        '<div class="filters" id="filters"><span class="chip on" data-cap="">全部</span></div>'
+        f'<div class="filters" id="filters">{quiz_chips}</div>'
         '<div class="card" id="quiz-root"></div>'
         '<p style="margin-top:14px;text-align:center">'
         '<button id="submit-quiz" class="btn">提交并查看反馈</button></p>'

@@ -29,6 +29,23 @@
     URL.revokeObjectURL(a.href);
   }
 
+  function tasksPayload(state) {
+    var out = [];
+    var tasks = state.tasks || {};
+    Object.keys(tasks).forEach(function (date) {
+      Object.keys(tasks[date]).forEach(function (taskId) {
+        out.push({ date: date, task_id: taskId, done: !!tasks[date][taskId] });
+      });
+    });
+    return out;
+  }
+
+  function readCardsPayload(state) {
+    return Object.keys(state.read_cards || {}).map(function (cid) {
+      return { card_id: cid, read_at: todayISO() };
+    });
+  }
+
   function cloudPush() {
     var state = load();
     var payload = {
@@ -47,7 +64,10 @@
       }),
       topic_progress: Object.keys(state.topic_progress || {}).map(function (tid) {
         return { topic_id: tid, data: state.topic_progress[tid] };
-      })
+      }),
+      tasks: tasksPayload(state),
+      read_cards: readCardsPayload(state),
+      _delete: state._deleted || {}
     };
     return fetch("/api/sync", {
       method: "POST",
@@ -66,6 +86,9 @@
         state.artifacts = state.artifacts || [];
         state.mocks = state.mocks || [];
         state.topic_progress = state.topic_progress || {};
+        state.tasks = state.tasks || {};
+        state.read_cards = state.read_cards || {};
+        state._deleted = { artifacts: [], mocks: [] };
         (data.checkins || []).forEach(function (c) {
           if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
         });
@@ -75,23 +98,44 @@
           var k = a.date + "|" + a.quiz_id;
           if (!quizKeys[k]) { state.quiz_answers.push(a); quizKeys[k] = 1; }
         });
-        var artKeys = {};
-        state.artifacts.forEach(function (a) { artKeys[String(a.id)] = 1; });
-        (data.artifacts || []).forEach(function (a) {
-          if (!artKeys[String(a.id)]) { state.artifacts.push(a); artKeys[String(a.id)] = 1; }
+        state.artifacts = (data.artifacts || []).map(function (a) {
+          return { id: a.id, type: a.type, title: a.title,
+                   content: a.content, updated_at: a.updated_at };
         });
-        var mockKeys = {};
-        state.mocks.forEach(function (m) { mockKeys[m.question_id + "|" + m.date] = 1; });
-        (data.mocks || []).forEach(function (m) {
-          var k = m.question_id + "|" + m.date;
-          if (!mockKeys[k]) { state.mocks.push(m); mockKeys[k] = 1; }
+        state.mocks = (data.mocks || []).map(function (m) {
+          return { date: m.date, section: m.section, question_id: m.question_id,
+                   score: Number(m.score), covered: m.covered, total: m.total };
         });
         (data.topic_progress || []).forEach(function (tp) {
           if (tp && tp.topic_id) { state.topic_progress[tp.topic_id] = tp.data || {}; }
         });
+        state.tasks = {};
+        (data.tasks || []).forEach(function (t) {
+          state.tasks[t.date] = state.tasks[t.date] || {};
+          state.tasks[t.date][t.task_id] = !!t.done;
+        });
+        state.read_cards = {};
+        (data.read_cards || []).forEach(function (r) {
+          state.read_cards[r.card_id] = true;
+        });
         save(state);
         return state;
       });
+  }
+
+  var _syncTimer = null;
+  function queueSync() {
+    if (_syncTimer) { clearTimeout(_syncTimer); }
+    _syncTimer = setTimeout(function () {
+      _syncTimer = null;
+      cloudPush().then(function (r) {
+        if (r && r.deleted) {
+          var state = load();
+          state._deleted = { artifacts: [], mocks: [] };
+          save(state);
+        }
+      }).catch(function () { /* 离线时静默，下次再同步 */ });
+    }, 500);
   }
 
   function renderCloudSync() {
@@ -102,6 +146,11 @@
       btn.textContent = "同步中…";
       cloudPush().then(function (r) {
         var saved = (r && r.saved) || {};
+        if (r && r.deleted) {
+          var st = load();
+          st._deleted = { artifacts: [], mocks: [] };
+          save(st);
+        }
         btn.textContent = "已同步 ✓";
         setTimeout(function () {
           btn.textContent = "☁ 云端同步";
@@ -131,6 +180,7 @@
     btn.onclick = function () {
       if (state.checkins.indexOf(today) === -1) { state.checkins.push(today); }
       save(state);
+      queueSync();
       markDone();
     };
     if (state.checkins.indexOf(today) !== -1) { markDone(); }
@@ -166,6 +216,7 @@
   function renderIndex() {
     var root = document.getElementById("task-list");
     if (!root || !window.PLAN_TASKS) { return; }
+    root.innerHTML = "";
     var today = todayISO();
     var keys = Object.keys(window.PLAN_TASKS).sort();
     var pick = window.PLAN_TASKS[today] ? today : null;
@@ -203,6 +254,7 @@
         state.tasks[pick] = state.tasks[pick] || {};
         state.tasks[pick][t.id] = cb.checked;
         save(state);
+        queueSync();
       });
       root.appendChild(li);
     });
@@ -216,25 +268,22 @@
     var submit = document.getElementById("submit-quiz");
     var filters = document.getElementById("filters");
     if (!root || !submit || !window.QUIZ_BANK) { return; }
+    root.innerHTML = "";
     var state = load();
     state.quiz_answers = state.quiz_answers || [];
     var done = {};
     state.quiz_answers.forEach(function (a) { done[a.quiz_id] = true; });
 
-    var caps = [];
-    window.QUIZ_BANK.forEach(function (q) {
-      if (caps.indexOf(q.capability_id) === -1) { caps.push(q.capability_id); }
-    });
     var chips = {};
-    caps.forEach(function (c) {
-      var chip = document.createElement("span");
-      chip.className = "chip";
-      chip.textContent = capName(c);
-      chip.dataset.cap = c;
-      chip.addEventListener("click", function () { setFilter(c, chip); });
-      filters.appendChild(chip);
-      chips[c] = chip;
+    filters.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
+      chips[chip.dataset.cap] = chip;
+      if (!window.__quizChipsBound) {
+        chip.addEventListener("click", function () {
+          setFilter(chip.dataset.cap || "", chip);
+        });
+      }
     });
+    window.__quizChipsBound = true;
     function setFilter(c, chip) {
       var allChips = filters.querySelectorAll(".chip");
       allChips.forEach(function (x) { x.classList.remove("on"); });
@@ -286,6 +335,7 @@
         });
       });
       save(state);
+      queueSync();
       alert("已保存本次答题，请记得导出同步文件。");
     };
 
@@ -299,6 +349,7 @@
     state.read_cards = state.read_cards || {};
     state.read_cards[window.CARD_ID] = true;
     save(state);
+    queueSync();
   }
 
   function renderProgress() {
@@ -421,7 +472,10 @@
       list.querySelectorAll("[data-del]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           state.artifacts = state.artifacts.filter(function (x) { return String(x.id) !== btn.dataset.del; });
+          state._deleted = state._deleted || { artifacts: [], mocks: [] };
+          state._deleted.artifacts.push(String(btn.dataset.del));
           save(state);
+          queueSync();
           renderList();
         });
       });
@@ -432,6 +486,7 @@
                              title: titleOf(editor.value), content: editor.value,
                              updated_at: todayISO() });
       save(state);
+      queueSync();
       renderList();
       alert("已保存");
     };
@@ -481,7 +536,10 @@
       list.querySelectorAll("[data-del]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           state.artifacts = state.artifacts.filter(function (x) { return String(x.id) !== btn.dataset.del; });
+          state._deleted = state._deleted || { artifacts: [], mocks: [] };
+          state._deleted.artifacts.push(String(btn.dataset.del));
           save(state);
+          queueSync();
           renderList();
         });
       });
@@ -493,6 +551,7 @@
                              title: m ? m[1].trim() : "项目拆解", content: editor.value,
                              updated_at: todayISO() });
       save(state);
+      queueSync();
       renderList();
       alert("已保存");
     };
@@ -560,6 +619,7 @@
         card.querySelector("[data-score]").textContent = "得分 " + score.toFixed(2) + "（覆盖 " + checked + "/" + total + "）";
       });
       save(state);
+      queueSync();
       renderHistory();
       alert(saved ? "已保存 " + saved + " 道题的自评" : "请先填写回答");
     };
@@ -725,15 +785,19 @@
           " · 自测 " + prog.quiz_correct + "/" + prog.quiz_total;
       }
     }
-    document.querySelectorAll("#topic-modules input[data-module]").forEach(function (box) {
-      if (prog.modules[box.dataset.module]) { box.checked = true; }
-      box.addEventListener("change", function () {
-        prog.modules[box.dataset.module] = box.checked;
-        state.topic_progress[topic.id] = prog;
-        save(state);
-        updateProgress();
+    if (!window.__topicBound) {
+      document.querySelectorAll("#topic-modules input[data-module]").forEach(function (box) {
+        if (prog.modules[box.dataset.module]) { box.checked = true; }
+        box.addEventListener("change", function () {
+          prog.modules[box.dataset.module] = box.checked;
+          state.topic_progress[topic.id] = prog;
+          save(state);
+          queueSync();
+          updateProgress();
+        });
       });
-    });
+      window.__topicBound = true;
+    }
     var submit = document.getElementById("topic-quiz-submit");
     if (submit) {
       submit.onclick = function () {
@@ -759,6 +823,7 @@
         prog.quiz_total = total;
         state.topic_progress[topic.id] = prog;
         save(state);
+        queueSync();
         updateProgress();
         alert("答对 " + correct + "/" + total);
       };
@@ -775,6 +840,7 @@
           prog.summary = text;
           state.topic_progress[topic.id] = prog;
           save(state);
+          queueSync();
         }
       }).catch(function (e) {
         if (resultEl) { resultEl.textContent = "AI 请求失败：" + e.message; }
@@ -799,18 +865,22 @@
 
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
-  renderCheckin();
-  renderIndex();
-  renderQuiz();
+  function renderAll() {
+    renderCheckin();
+    renderIndex();
+    renderQuiz();
+    renderProgress();
+    renderOutputs();
+    renderProject();
+    renderMock();
+    renderReview();
+    renderTopic();
+  }
+  renderAll();
   markCardRead();
-  renderProgress();
-  renderOutputs();
-  renderProject();
-  renderMock();
-  renderReview();
-  renderTopic();
   renderCloudSync();
-  cloudPull().catch(function () { /* 本地环境无 API，静默 */ });
+  cloudPull().then(function () { renderAll(); })
+    .catch(function () { /* 本地环境无 API，静默 */ });
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(function () { /* 静默 */ });
   }

@@ -18,7 +18,10 @@ TABLES = {
     "artifacts": ("ai_pm_artifacts", "id"),
     "mocks": ("ai_pm_mocks", "id"),
     "topic_progress": ("ai_pm_topic_progress", "topic_id"),
+    "tasks": ("ai_pm_tasks", "date,task_id"),
+    "read_cards": ("ai_pm_read_cards", "card_id"),
 }
+DELETE_TABLES = ("artifacts", "mocks")
 
 
 def _rest(key, method="GET", payload=None):
@@ -39,6 +42,21 @@ def _rest(key, method="GET", payload=None):
     with urllib.request.urlopen(req, timeout=20) as r:
         body = r.read().decode()
         return json.loads(body) if body else None
+
+
+def _rest_delete(key: str, ids: list) -> int:
+    table, _ = TABLES[key]
+    quoted = ",".join(ids)
+    req = urllib.request.Request(
+        SUPABASE_URL + f"/rest/v1/{table}?id=in.({quoted})",
+        headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Prefer": "return=minimal",
+        },
+        method="DELETE")
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return len(ids)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -75,6 +93,11 @@ class handler(BaseHTTPRequestHandler):
                 for rec in payload.get(key, []):
                     _rest(key, "POST", rec)
                     saved[key] += 1
-            self._send(200, {"saved": saved})
+            deleted = {key: 0 for key in DELETE_TABLES}
+            for key in DELETE_TABLES:
+                ids = payload.get("_delete", {}).get(key, [])
+                if ids:
+                    deleted[key] = _rest_delete(key, ids)
+            self._send(200, {"saved": saved, "deleted": deleted})
         except Exception as e:  # noqa: BLE001
             self._send(500, {"error": str(e)})
