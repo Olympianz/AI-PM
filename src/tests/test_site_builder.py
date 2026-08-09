@@ -86,5 +86,5 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
-    assert "ai-pm-v4" in sw
+    assert "ai-pm-v5" in sw
     assert "learn.html" in sw

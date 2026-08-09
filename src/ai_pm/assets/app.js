@@ -375,7 +375,11 @@
     };
 
     var hashCap = (location.hash || "").replace("#cap-", "");
-    if (hashCap && capOrder.indexOf(hashCap) !== -1) { setFilter(hashCap); }
+    if (hashCap && capOrder.indexOf(hashCap) !== -1) {
+      setFilter(hashCap);
+    } else {
+      renderBar("");
+    }
   }
 
   function markCardRead() {

@@ -507,7 +507,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  "/outputs.html", "/project.html", "/mock.html", "/review.html",
                  "/topics.html", "/progress.html", "/manifest.webmanifest",
                  "/assets/app.js", "/assets/style.css"]
-    sw = ("const CACHE = \"ai-pm-v4\";\n"
+    sw = ("const CACHE = \"ai-pm-v5\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'
           "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));\n"
