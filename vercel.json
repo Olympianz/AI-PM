@@ -1,4 +1,5 @@
 {
+  "regions": ["hkg1"],
   "functions": {
     "api/ai.py": { "maxDuration": 60, "regions": ["hkg1"] },
     "api/sync.py": { "maxDuration": 60, "regions": ["hkg1"] }
