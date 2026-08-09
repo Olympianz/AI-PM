@@ -371,7 +371,7 @@
       });
       save(state);
       queueSync();
-      alert("已保存本次答题，请记得导出同步文件。");
+      alert("已保存并自动同步到云端。");
     };
 
     var hashCap = (location.hash || "").replace("#cap-", "");

@@ -322,7 +322,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         )
         (out / "cases" / f'{c["id"]}.html').write_text(_page("案例拆解", "cases", body, cases_js), encoding="utf-8")
 
-    # ---- progress.html（客户端从 localStorage 计算）----
+    # ---- progress.html（客户端从云端数据计算）----
     progress_body = (
         '<header class="top"><h1>学习进度</h1>'
         '<p class="sub" id="prog-day"></p></header>'
@@ -337,8 +337,10 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<div class="stat"><div class="v" id="stat-quiz">-</div><div class="k">已答题目</div></div>'
         "</div>"
         '<div class="card"><h2>说明</h2>'
-        '<p class="muted" style="font-size:12px">数据保存在浏览器 localStorage，'
-        '通过「导出同步文件」可合并回本地跟踪（data/tracking/）。</p></div>'
+        '<p class="muted" style="font-size:12px">所有学习数据自动保存到 Supabase 云端'
+        '（打卡 / 答题 / 输出物 / 模拟面试 / 专题进度 / 任务状态 / 已读卡片），'
+        '换设备打开同一网址即可恢复；本机只保留离线缓存。'
+        '可点首页「☁ 云端同步」手动上传，离线时也可用「导出文件」兜底。</p></div>'
     )
     progress_js = (f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
                    f"window.CARD_COUNT = {len(list((data / 'content' / 'knowledge_cards').glob('*.md')))};"
