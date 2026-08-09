@@ -69,6 +69,8 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     quiz = (out / "quiz.html").read_text(encoding="utf-8")
     assert "q-001" in quiz
     assert 'data-cap="A2"' in quiz
+    assert 'id="tag-modal"' in quiz
+    assert 'id="tag-grid"' in quiz
     learn = (out / "learn.html").read_text(encoding="utf-8")
     assert "cards/A2.html" in learn
     case_page = (out / "cases" / "c-001.html").read_text(encoding="utf-8")

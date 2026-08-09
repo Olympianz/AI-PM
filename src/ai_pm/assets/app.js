@@ -267,7 +267,8 @@
     var root = document.getElementById("quiz-root");
     var submit = document.getElementById("submit-quiz");
     var filters = document.getElementById("filters");
-    if (!root || !submit || !window.QUIZ_BANK) { return; }
+    var tagModal = document.getElementById("tag-modal");
+    if (!root || !submit || !window.QUIZ_BANK || !filters) { return; }
     root.innerHTML = "";
     var state = load();
     state.quiz_answers = state.quiz_answers || [];
@@ -275,21 +276,46 @@
     state.quiz_answers.forEach(function (a) { done[a.quiz_id] = true; });
 
     var chips = {};
-    filters.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
-      chips[chip.dataset.cap] = chip;
-      if (!window.__quizChipsBound) {
-        chip.addEventListener("click", function () {
-          setFilter(chip.dataset.cap || "", chip);
-        });
-      }
+    var containers = [filters];
+    var tagGrid = document.getElementById("tag-grid");
+    if (tagGrid) { containers.push(tagGrid); }
+    containers.forEach(function (container) {
+      container.querySelectorAll(".chip[data-cap]").forEach(function (chip) {
+        (chips[chip.dataset.cap] = chips[chip.dataset.cap] || []).push(chip);
+        if (!window.__quizChipsBound) {
+          chip.addEventListener("click", function () {
+            setFilter(chip.dataset.cap || "");
+            if (tagModal && tagModal.classList.contains("open")) {
+              tagModal.classList.remove("open");
+            }
+          });
+        }
+      });
     });
     window.__quizChipsBound = true;
-    function setFilter(c, chip) {
-      var allChips = filters.querySelectorAll(".chip");
-      allChips.forEach(function (x) { x.classList.remove("on"); });
-      chip.classList.add("on");
+    function setFilter(c) {
+      containers.forEach(function (container) {
+        container.querySelectorAll(".chip[data-cap]").forEach(function (x) {
+          x.classList.toggle("on", x.dataset.cap === c);
+        });
+      });
       root.querySelectorAll(".quiz-group").forEach(function (sec) {
         sec.style.display = (!c || sec.dataset.cap === c) ? "" : "none";
+      });
+    }
+    var openTags = document.getElementById("open-tags");
+    if (openTags && tagModal) {
+      openTags.addEventListener("click", function () {
+        tagModal.classList.add("open");
+      });
+      tagModal.addEventListener("click", function (e) {
+        if (e.target === tagModal) { tagModal.classList.remove("open"); }
+      });
+    }
+    var closeTags = document.getElementById("close-tags");
+    if (closeTags && tagModal) {
+      closeTags.addEventListener("click", function () {
+        tagModal.classList.remove("open");
       });
     }
 
@@ -340,7 +366,7 @@
     };
 
     var hashCap = (location.hash || "").replace("#cap-", "");
-    if (hashCap && chips[hashCap]) { setFilter(hashCap, chips[hashCap]); }
+    if (hashCap && chips[hashCap]) { setFilter(hashCap); }
   }
 
   function markCardRead() {

@@ -111,6 +111,10 @@ pre{white-space:pre-wrap;background:#f8f9fc;border:1px solid var(--line);border-
 .ai-result{background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-top:10px;display:none;max-height:420px;overflow:auto}
 .ai-result.show{display:block}
 .progress-line{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.tag-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.modal{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}
+.modal.open{display:flex}
+.sheet{background:#fff;border-radius:18px 18px 0 0;max-width:520px;width:100%;padding:20px 18px 28px;max-height:72vh;overflow:auto}
 .desk-only{display:none}
 @media (min-width:900px){
   body{display:flex;flex-direction:column;padding-bottom:0}
@@ -261,13 +265,19 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     for q in bank:
         if q["capability_id"] not in cap_order:
             cap_order.append(q["capability_id"])
-    quiz_chips = ('<span class="chip on" data-cap="">全部</span>'
-                  + "".join(f'<span class="chip" data-cap="{c}">{cap_names_dict.get(c, c)}</span>'
-                            for c in cap_order))
+    all_chips = ('<span class="chip on" data-cap="">全部</span>'
+                 + "".join(f'<span class="chip" data-cap="{c}">{cap_names_dict.get(c, c)}</span>'
+                           for c in cap_order))
     quiz_body = (
         '<header class="top"><h1>快速自测</h1>'
         '<p class="sub">选择答案后提交，即时查看反馈</p></header>'
-        f'<div class="filters" id="filters">{quiz_chips}</div>'
+        f'<div class="filters" id="filters">{all_chips}'
+        '<span class="chip" id="open-tags">全部标签 ▾</span></div>'
+        f'<div class="modal" id="tag-modal"><div class="sheet">'
+        '<h2 style="font-size:16px;font-weight:700">选择分类</h2>'
+        f'<div class="tag-grid" id="tag-grid">{all_chips}</div>'
+        '<button id="close-tags" class="btn ghost" style="width:100%;margin-top:16px">关闭</button>'
+        "</div></div>"
         '<div class="card" id="quiz-root"></div>'
         '<p style="margin-top:14px;text-align:center">'
         '<button id="submit-quiz" class="btn">提交并查看反馈</button></p>'
