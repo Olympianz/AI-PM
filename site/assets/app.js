@@ -879,7 +879,10 @@
   renderAll();
   markCardRead();
   renderCloudSync();
-  cloudPull().then(function () { renderAll(); })
+  cloudPull().then(function () {
+    renderAll();
+    return cloudPush();
+  })
     .catch(function () { /* 本地环境无 API，静默 */ });
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(function () { /* 静默 */ });
