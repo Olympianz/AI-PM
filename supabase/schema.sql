@@ -53,3 +53,21 @@ create table if not exists public.ai_pm_bookmarks (
   card_id    text primary key,
   created_at text
 );
+
+create table if not exists public.ai_pm_gaps (
+  id         text primary key,
+  text       text not null,
+  source     text not null default '',
+  created_at text not null,
+  status     text not null default 'open',
+  topic_id   text,
+  suggestion jsonb
+);
+
+create table if not exists public.ai_pm_topic_items (
+  id         text primary key,
+  topic_id   text not null,
+  title      text not null,
+  content    text not null,
+  created_at text not null
+);
