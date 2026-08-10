@@ -135,11 +135,11 @@ def _nav(active: str) -> str:
     tabs = [("index", "今日", "🏠"), ("learn", "学习", "📚"), ("quiz", "题库", "✏️"),
             ("cases", "案例", "🗂"), ("topics", "专题", "🎯"), ("outputs", "输出", "📝"),
             ("project", "拆解", "🛠"), ("mock", "面试", "🎤"),
-            ("review", "复盘", "🔁"), ("progress", "进度", "📈")]
+            ("review", "复盘", "🔁"), ("gaps", "不足", "📌"), ("progress", "进度", "📈")]
     items = []
     for key, label, ico in tabs:
         cls = "active" if key == active else ""
-        cls_attr = f' class="{cls}{" desk-only" if key in ("outputs", "project", "mock", "review") else ""}"'
+        cls_attr = f' class="{cls}{" desk-only" if key in ("outputs", "project", "mock", "review", "gaps") else ""}"'
         items.append(f'<a href="/{key}.html"{cls_attr}><span class="n-ico">{ico}</span>{label}</a>')
     return '<nav class="bottom">' + "".join(items) + "</nav>"
 
@@ -158,6 +158,17 @@ def _page(title: str, active: str, body: str, extra_js: str = "") -> str:
         '<script src="/assets/app.js"></script>'
         "</body></html>"
     )
+
+
+_GAP_MODAL = (
+    '<div class="modal" id="gap-modal"><div class="sheet">'
+    '<h2 style="font-size:16px;font-weight:700">📌 记录不足点</h2>'
+    '<p class="muted" style="font-size:12px;margin:4px 0">学习中的知识缺口、没搞懂的概念，记下来交给 AI 归类到专题</p>'
+    '<textarea id="gap-capture-input" rows="4" placeholder="例如：不清楚 A/B 测试最小样本量怎么算…"></textarea>'
+    '<div class="btn-row"><button id="gap-capture-save" class="btn">保存</button>'
+    '<button id="gap-capture-close" class="btn ghost">取消</button></div>'
+    "</div></div>"
+)
 
 
 def _cap_names(model: dict) -> str:
@@ -271,10 +282,14 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         card_html = (
             '<header class="top"><h1>知识卡</h1>'
             f'<p class="sub">{cap_label} · 约 {meta.get("minutes", 4)} 分钟</p></header>'
-            '<p style="margin-top:12px"><button id="bookmark-btn" class="btn ghost">☆ 收藏</button></p>'
+            '<div class="btn-row">'
+            '<button id="bookmark-btn" class="btn ghost">☆ 收藏</button>'
+            '<button id="record-gap-btn" class="btn ghost">📌 记录不足点</button>'
+            "</div>"
             f'<div class="card prose">{_md_to_html(body)}</div>'
             '<div class="card" id="card-nav" style="margin-top:14px"></div>'
             '<p style="margin-top:14px;text-align:center"><a class="btn ghost" href="/learn.html">← 返回知识卡</a></p>'
+            + _GAP_MODAL
         )
         card_js = (f'window.CARD_ID = "{meta["id"]}";'
                    f"window.CARD_PLAN = {json.dumps(card_plan, ensure_ascii=False)};"
@@ -306,7 +321,10 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<div class="card" id="quiz-root"></div>'
         '<p style="margin-top:14px;text-align:center">'
         '<button id="submit-quiz" class="btn">提交并查看反馈</button></p>'
-        '<p style="margin-top:10px;text-align:center"><button id="export-sync" class="btn ghost">导出同步文件</button></p>'
+        '<p style="margin-top:10px;text-align:center">'
+        '<button id="record-gap-btn" class="btn ghost">📌 记录不足点</button> '
+        '<button id="export-sync" class="btn ghost">导出同步文件</button></p>'
+        + _GAP_MODAL
     )
     quiz_js = (f'window.QUIZ_BANK = {json.dumps(bank, ensure_ascii=False)};'
                f'window.CAPABILITY_NAMES = {cap_names};')
@@ -455,6 +473,27 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  f"window.QUIZ_COUNT = {len(bank)};" + baseline_js)
     (out / "review.html").write_text(_page("周复盘", "review", review_body, review_js), encoding="utf-8")
 
+    # ---- gaps.html（我的不足点）----
+    gaps_body = (
+        '<header class="top"><h1>我的不足点</h1>'
+        '<p class="sub">学习中发现的知识缺口，AI 自动归类到专题</p></header>'
+        '<div class="card"><h2>快速记录</h2>'
+        '<textarea id="gap-input" rows="3" placeholder="例如：不确定 A/B 测试最小样本量怎么算…"></textarea>'
+        '<div class="btn-row"><button id="gap-save" class="btn">保存</button></div></div>'
+        '<div class="card"><h2>待整理（<span id="gap-open-count">0</span>）</h2>'
+        '<div id="gap-open"></div>'
+        '<div class="btn-row">'
+        '<button id="gap-triage" class="btn">🤖 AI 一键整理</button>'
+        '<button id="gap-apply" class="btn ghost">确认添加到专题</button>'
+        "</div></div>"
+        '<div class="card"><h2>已整理</h2><div id="gap-done"></div></div>'
+    )
+    topics_lite = [{"id": t["id"], "name": t["name"],
+                     "modules": [m["title"] for m in t.get("modules", [])]}
+                   for t in topics]
+    gaps_js = "window.TOPICS = " + json.dumps(topics_lite, ensure_ascii=False) + ";"
+    (out / "gaps.html").write_text(_page("我的不足点", "gaps", gaps_body, gaps_js), encoding="utf-8")
+
     # ---- topics.html + topics/<id>.html（专题学习）----
     topic_cards = []
     for t in topics:
@@ -467,6 +506,11 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     topics_body = (
         '<header class="top"><h1>主题学习</h1>'
         '<p class="sub">针对个人短板开专题 · AI 辅助计划/出题/总结</p></header>'
+        '<div class="card" style="margin-top:12px"><div style="display:flex;align-items:center;gap:12px">'
+        '<div style="flex:1"><h2>📌 我的不足点</h2>'
+        '<p class="muted" style="font-size:12px">学习中随手记录，AI 自动归类到专题</p></div>'
+        '<a class="btn" href="/gaps.html" style="font-size:13px">去整理（<span id="gap-count">0</span>）</a>'
+        "</div></div>"
         '<div class="card">' + "".join(topic_cards) + "</div>"
     )
     (out / "topics.html").write_text(_page("主题学习", "topics", topics_body, ""), encoding="utf-8")
@@ -504,6 +548,8 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             f'<div class="card"><h2>输出任务</h2><ul>{outputs_html}</ul>'
             '<p style="margin-top:8px"><a class="btn ghost" href="/outputs.html">去输出物工作台 →</a></p></div>'
             f'<div class="card"><h2>推荐资源</h2>{resources_html}</div>'
+            '<div class="card"><h2>AI 补充学习项</h2><div id="topic-items"></div></div>'
+            '<div class="btn-row"><button id="record-gap-btn" class="btn ghost">📌 记录不足点</button></div>'
             '<div class="card"><h2>AI 助手（DeepSeek）</h2>'
             '<p class="muted" style="font-size:12px">生成计划、出题、总结进度、答疑</p>'
             '<div class="btn-row">'
@@ -514,6 +560,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
             '<textarea id="ai-question" rows="3" style="margin-top:10px" placeholder="或直接向 AI 提问…"></textarea>'
             '<div class="btn-row"><button id="ai-ask" class="btn ghost">提问</button></div>'
             '<div id="ai-result" class="ai-result"></div></div>'
+            + _GAP_MODAL
         )
         topic_js = "window.TOPIC = " + json.dumps(t, ensure_ascii=False) + ";"
         (out / "topics" / f'{t["id"]}.html').write_text(
@@ -526,9 +573,9 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
 
     sw_assets = ["/", "/index.html", "/learn.html", "/quiz.html", "/cases.html",
                  "/outputs.html", "/project.html", "/mock.html", "/review.html",
-                 "/topics.html", "/progress.html", "/manifest.webmanifest",
+                 "/topics.html", "/gaps.html", "/progress.html", "/manifest.webmanifest",
                  "/assets/app.js", "/assets/style.css"]
-    sw = ("const CACHE = \"ai-pm-v7\";\n"
+    sw = ("const CACHE = \"ai-pm-v8\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'
           "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));\n"

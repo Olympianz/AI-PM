@@ -21,8 +21,10 @@ TABLES = {
     "tasks": ("ai_pm_tasks", "date,task_id"),
     "read_cards": ("ai_pm_read_cards", "card_id"),
     "bookmarks": ("ai_pm_bookmarks", "card_id"),
+    "gaps": ("ai_pm_gaps", "id"),
+    "topic_items": ("ai_pm_topic_items", "id"),
 }
-DELETE_TABLES = ("artifacts", "mocks")
+DELETE_TABLES = ("artifacts", "mocks", "gaps")
 
 
 def _rest(key, method="GET", payload=None):
@@ -78,9 +80,13 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             out = {}
+            missing = []
             for key in TABLES:
-                rows = _rest(key) or []
-                out[key] = rows
+                try:
+                    out[key] = _rest(key) or []
+                except Exception:  # noqa: BLE001 表未建时容错，返回空
+                    out[key] = []
+                    missing.append(key)
             self._send(200, out)
         except Exception as e:  # noqa: BLE001
             self._send(500, {"error": str(e)})
@@ -90,15 +96,22 @@ class handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(n).decode() or "{}")
             saved = {key: 0 for key in TABLES}
+            errors = {}
             for key in TABLES:
                 for rec in payload.get(key, []):
-                    _rest(key, "POST", rec)
-                    saved[key] += 1
+                    try:
+                        _rest(key, "POST", rec)
+                        saved[key] += 1
+                    except Exception as e:  # noqa: BLE001
+                        errors[key] = errors.get(key, 0) + 1
             deleted = {key: 0 for key in DELETE_TABLES}
             for key in DELETE_TABLES:
                 ids = payload.get("_delete", {}).get(key, [])
                 if ids:
-                    deleted[key] = _rest_delete(key, ids)
-            self._send(200, {"saved": saved, "deleted": deleted})
+                    try:
+                        deleted[key] = _rest_delete(key, ids)
+                    except Exception:  # noqa: BLE001
+                        errors["_delete_" + key] = errors.get("_delete_" + key, 0) + 1
+            self._send(200, {"saved": saved, "deleted": deleted, "errors": errors})
         except Exception as e:  # noqa: BLE001
             self._send(500, {"error": str(e)})

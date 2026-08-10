@@ -62,6 +62,7 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "review.html" in written
     assert "topics.html" in written
     assert "topics/ux.html" in written
+    assert "gaps.html" in written
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
@@ -72,6 +73,7 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert 'id="tag-modal"' in quiz
     assert 'id="tag-grid"' in quiz
     assert 'class="chip ghost-btn" id="open-tags"' in quiz
+    assert 'id="record-gap-btn"' in quiz
     learn = (out / "learn.html").read_text(encoding="utf-8")
     assert "cards/A2.html" in learn
     assert 'id="learn-filters"' in learn
@@ -80,6 +82,8 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert 'id="card-nav"' in card_page
     assert "CARD_PLAN" in card_page
     assert 'id="bookmark-btn"' in card_page
+    assert 'id="record-gap-btn"' in card_page
+    assert 'id="gap-modal"' in card_page
     case_page = (out / "cases" / "c-001.html").read_text(encoding="utf-8")
     assert "客服" in case_page
     mock_page = (out / "mock.html").read_text(encoding="utf-8")
@@ -89,8 +93,12 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     topics_page = (out / "topics" / "ux.html").read_text(encoding="utf-8")
     assert "用户体验设计" in topics_page
     assert "window.TOPIC" in topics_page
+    assert 'id="topic-items"' in topics_page
+    gaps_page = (out / "gaps.html").read_text(encoding="utf-8")
+    assert 'id="gap-triage"' in gaps_page
+    assert "window.TOPICS" in gaps_page
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
-    assert "ai-pm-v7" in sw
+    assert "ai-pm-v8" in sw
     assert "learn.html" in sw

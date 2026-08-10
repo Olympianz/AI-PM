@@ -70,6 +70,15 @@
       bookmarks: (state.bookmarks || []).map(function (id) {
         return { card_id: id, created_at: todayISO() };
       }),
+      gaps: (state.gaps || []).map(function (g) {
+        return { id: String(g.id), text: g.text, source: g.source || "",
+                 created_at: g.created_at, status: g.status || "open",
+                 topic_id: g.topic_id || null, suggestion: g.suggestion || null };
+      }),
+      topic_items: (state.topic_items || []).map(function (it) {
+        return { id: String(it.id), topic_id: it.topic_id, title: it.title,
+                 content: it.content, created_at: it.created_at };
+      }),
       _delete: state._deleted || {}
     };
     return fetch("/api/sync", {
@@ -92,7 +101,9 @@
         state.tasks = state.tasks || {};
         state.read_cards = state.read_cards || {};
         state.bookmarks = state.bookmarks || [];
-        state._deleted = { artifacts: [], mocks: [] };
+        state.gaps = state.gaps || [];
+        state.topic_items = state.topic_items || [];
+        state._deleted = { artifacts: [], mocks: [], gaps: [] };
         (data.checkins || []).forEach(function (c) {
           if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
         });
@@ -123,6 +134,15 @@
           state.read_cards[r.card_id] = true;
         });
         state.bookmarks = (data.bookmarks || []).map(function (b) { return b.card_id; });
+        state.gaps = (data.gaps || []).map(function (g) {
+          return { id: g.id, text: g.text, source: g.source || "",
+                   created_at: g.created_at, status: g.status || "open",
+                   topic_id: g.topic_id || null, suggestion: g.suggestion || null };
+        });
+        state.topic_items = (data.topic_items || []).map(function (it) {
+          return { id: it.id, topic_id: it.topic_id, title: it.title,
+                   content: it.content, created_at: it.created_at };
+        });
         save(state);
         return state;
       });
@@ -136,7 +156,7 @@
       cloudPush().then(function (r) {
         if (r && r.deleted) {
           var state = load();
-          state._deleted = { artifacts: [], mocks: [] };
+          state._deleted = { artifacts: [], mocks: [], gaps: [] };
           save(state);
         }
       }).catch(function () { /* 离线时静默，下次再同步 */ });
@@ -153,7 +173,7 @@
         var saved = (r && r.saved) || {};
         if (r && r.deleted) {
           var st = load();
-          st._deleted = { artifacts: [], mocks: [] };
+          st._deleted = { artifacts: [], mocks: [], gaps: [] };
           save(st);
         }
         btn.textContent = "已同步 ✓";
@@ -791,26 +811,36 @@
     return state.topic_progress[topic.id] || { modules: {}, quiz_correct: 0, quiz_total: 0 };
   }
 
-  function aiCall(action, question) {
+  function aiCall(action, question, extra) {
     var topic = window.TOPIC || {};
+    var payload = {
+      action: action,
+      question: question || "",
+      topic_name: topic.name || "",
+      topic_context: {
+        reason: topic.reason || "",
+        goals: topic.goals || [],
+        modules: (topic.modules || []).map(function (m) { return m.title; }),
+        progress: getTopicProgress()
+      }
+    };
+    if (extra) {
+      Object.keys(extra).forEach(function (k) { payload[k] = extra[k]; });
+    }
     return fetch("/api/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: action,
-        question: question || "",
-        topic_name: topic.name || "",
-        topic_context: {
-          reason: topic.reason || "",
-          goals: topic.goals || [],
-          modules: (topic.modules || []).map(function (m) { return m.title; }),
-          progress: getTopicProgress()
-        }
-      })
+      body: JSON.stringify(payload)
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.error) { throw new Error(d.error); }
       return d.text;
     });
+  }
+
+  function parseJson(text) {
+    var t = String(text || "").trim();
+    t = t.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    return JSON.parse(t);
   }
 
   function renderTopic() {
@@ -1013,6 +1043,202 @@
     });
   }
 
+  function updateGapCounts() {
+    var s = load();
+    s.gaps = s.gaps || [];
+    var open = s.gaps.filter(function (g) { return g.status === "open"; }).length;
+    var el1 = document.getElementById("gap-open-count");
+    if (el1) { el1.textContent = open; }
+    var el2 = document.getElementById("gap-count");
+    if (el2) { el2.textContent = open; }
+  }
+
+  function renderGapCapture() {
+    var modal = document.getElementById("gap-modal");
+    var trigger = document.getElementById("record-gap-btn");
+    if (!modal || !trigger) { return; }
+    var input = document.getElementById("gap-capture-input");
+    var source = "学习中";
+    if (window.CARD_ID) { source = "知识卡 " + window.CARD_ID; }
+    else if (window.TOPIC) { source = "专题：" + window.TOPIC.name; }
+    else if (window.PAGE === "quiz") { source = "快速自测"; }
+    trigger.onclick = function () {
+      modal.classList.add("open");
+      if (input) { input.focus(); }
+    };
+    modal.onclick = function (e) {
+      if (e.target === modal) { modal.classList.remove("open"); }
+    };
+    var closeBtn = document.getElementById("gap-capture-close");
+    if (closeBtn) {
+      closeBtn.onclick = function () { modal.classList.remove("open"); };
+    }
+    var saveBtn = document.getElementById("gap-capture-save");
+    if (saveBtn) {
+      saveBtn.onclick = function () {
+        var text = (input && input.value || "").trim();
+        if (!text) { alert("请输入内容"); return; }
+        var state = load();
+        state.gaps = state.gaps || [];
+        state.gaps.push({ id: Date.now(), text: text, source: source,
+                          created_at: todayISO(), status: "open" });
+        save(state);
+        queueSync();
+        if (input) { input.value = ""; }
+        modal.classList.remove("open");
+        updateGapCounts();
+        alert("已记录，可在「专题 → 我的不足点」让 AI 归类");
+      };
+    }
+    updateGapCounts();
+  }
+
+  function renderGaps() {
+    var openList = document.getElementById("gap-open");
+    if (!openList) { return; }
+    var state = load();
+    state.gaps = state.gaps || [];
+    state.topic_items = state.topic_items || [];
+    var topicNames = {};
+    (window.TOPICS || []).forEach(function (t) { topicNames[t.id] = t.name; });
+
+    var input = document.getElementById("gap-input");
+    var saveBtn = document.getElementById("gap-save");
+    if (saveBtn) {
+      saveBtn.onclick = function () {
+        var text = (input && input.value || "").trim();
+        if (!text) { alert("请输入内容"); return; }
+        state.gaps.push({ id: Date.now(), text: text, source: "手动记录",
+                          created_at: todayISO(), status: "open" });
+        save(state);
+        queueSync();
+        if (input) { input.value = ""; }
+        render();
+        alert("已记录");
+      };
+    }
+
+    function render() {
+      var open = state.gaps.filter(function (g) { return g.status === "open"; });
+      var done = state.gaps.filter(function (g) { return g.status === "triaged"; });
+      updateGapCounts();
+      openList.innerHTML = open.map(function (g) {
+        var sug = g.suggestion || null;
+        var target = sug ? (topicNames[sug.topic_id] || sug.topic_id) : "待 AI 归类";
+        return '<div class="task">' +
+          '<input type="checkbox" class="check" data-gid="' + g.id + '">' +
+          '<span class="t-main"><span class="t-title">' + escapeHtml(g.text) + "</span>" +
+          '<span class="t-meta">' + escapeHtml(g.source) + " · " + g.created_at +
+          (sug ? " → " + escapeHtml(target) : "") + "</span></span>" +
+          '<button class="btn ghost" data-del="' + g.id + '" style="padding:6px 10px;font-size:12px">删除</button>' +
+          "</div>";
+      }).join("") || '<p class="muted" style="padding:8px 0">暂无待整理不足点</p>';
+      openList.querySelectorAll("[data-del]").forEach(function (btn) {
+        btn.onclick = function () {
+          state.gaps = state.gaps.filter(function (g) { return String(g.id) !== btn.dataset.del; });
+          state._deleted = state._deleted || { artifacts: [], mocks: [], gaps: [] };
+          state._deleted.gaps.push(btn.dataset.del);
+          save(state);
+          queueSync();
+          render();
+        };
+      });
+      var doneList = document.getElementById("gap-done");
+      doneList.innerHTML = done.map(function (g) {
+        return '<div class="task"><span class="t-ico">✅</span>' +
+          '<span class="t-main"><span class="t-title">' + escapeHtml(g.text) + "</span>" +
+          '<span class="t-meta">' + escapeHtml(topicNames[g.topic_id] || g.topic_id || "专题") +
+          "</span></span></div>";
+      }).join("") || '<p class="muted" style="padding:8px 0">还没有已整理的不足点</p>';
+    }
+
+    var triageBtn = document.getElementById("gap-triage");
+    if (triageBtn) {
+      triageBtn.onclick = function () {
+        var open = state.gaps.filter(function (g) { return g.status === "open"; });
+        if (!open.length) { alert("没有待整理的不足点"); return; }
+        triageBtn.disabled = true;
+        triageBtn.textContent = "AI 整理中…";
+        aiCall("triage_gaps", "", {
+          gaps: open.map(function (g) {
+            return { gap_id: String(g.id), text: g.text, source: g.source };
+          }),
+          topics: window.TOPICS || []
+        }).then(function (text) {
+          var parsed = parseJson(text);
+          if (!Array.isArray(parsed)) { throw new Error("AI 输出格式不对"); }
+          var byId = {};
+          parsed.forEach(function (item) {
+            if (item && item.gap_id) { byId[String(item.gap_id)] = item; }
+          });
+          state.gaps.forEach(function (g) {
+            if (g.status === "open" && byId[String(g.id)]) {
+              g.suggestion = {
+                topic_id: byId[String(g.id)].topic_id || "",
+                title: byId[String(g.id)].title || "",
+                content: byId[String(g.id)].content || ""
+              };
+            }
+          });
+          save(state);
+          render();
+          alert("AI 已归类 " + Object.keys(byId).length + " 条，检查后点「确认添加到专题」");
+        }).catch(function (e) {
+          alert("AI 整理失败：" + e.message);
+        }).finally(function () {
+          triageBtn.disabled = false;
+          triageBtn.textContent = "🤖 AI 一键整理";
+        });
+      };
+    }
+
+    var applyBtn = document.getElementById("gap-apply");
+    if (applyBtn) {
+      applyBtn.onclick = function () {
+        var picked = {};
+        openList.querySelectorAll('input[data-gid]:checked').forEach(function (cb) {
+          picked[cb.dataset.gid] = true;
+        });
+        var count = 0;
+        state.gaps.forEach(function (g) {
+          if (g.status === "open" && g.suggestion &&
+              (!Object.keys(picked).length || picked[String(g.id)])) {
+            g.status = "triaged";
+            g.topic_id = g.suggestion.topic_id;
+            state.topic_items.push({
+              id: Date.now() + "-" + count,
+              topic_id: g.suggestion.topic_id,
+              title: g.suggestion.title || g.text,
+              content: g.suggestion.content || g.text,
+              created_at: todayISO()
+            });
+            count += 1;
+          }
+        });
+        if (!count) { alert("请先运行 AI 一键整理（或勾选要添加的项）"); return; }
+        save(state);
+        queueSync();
+        render();
+        alert("已添加 " + count + " 条学习项到专题");
+      };
+    }
+    render();
+  }
+
+  function renderTopicItems() {
+    var container = document.getElementById("topic-items");
+    if (!container || !window.TOPIC) { return; }
+    var state = load();
+    state.topic_items = state.topic_items || [];
+    var items = state.topic_items.filter(function (it) { return it.topic_id === window.TOPIC.id; });
+    container.innerHTML = items.map(function (it) {
+      return '<div class="task"><span class="t-ico">🧩</span>' +
+        '<span class="t-main"><span class="t-title">' + escapeHtml(it.title) + "</span>" +
+        '<span class="t-meta">' + escapeHtml(it.content) + "</span></span></div>";
+    }).join("") ||
+      '<p class="muted" style="padding:8px 0">暂无补充学习项 —— 记录不足点后让 AI 归类到这里</p>';
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   function renderAll() {
@@ -1028,6 +1254,9 @@
     renderCardNav();
     renderCardBookmark();
     renderLearnBookmarks();
+    renderGapCapture();
+    renderGaps();
+    renderTopicItems();
   }
   renderAll();
   markCardRead();

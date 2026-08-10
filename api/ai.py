@@ -31,6 +31,16 @@ def _action_prompt(action: str, payload: dict) -> str:
     if action == "summary":
         return (f"用户刚完成专题《{name}》的一部分学习，进度：{json.dumps(ctx.get('progress', {}), ensure_ascii=False)}。"
                 "请生成本专题阶段性总结与复盘：已掌握要点、薄弱点、下周建议（含资料检索关键词）。")
+    if action == "triage_gaps":
+        gaps = payload.get("gaps", [])
+        topics = payload.get("topics", [])
+        return ("以下是我在学习中记录的不足点（JSON 数组，字段 text/source）：\n"
+                + json.dumps(gaps, ensure_ascii=False)
+                + "\n\n现有学习主题（id/name/modules）：\n"
+                + json.dumps(topics, ensure_ascii=False)
+                + "\n\n请把每条不足点归入最合适的现有主题；如果都不合适，topic_id 使用 'new:<简短名称>' 表示建议新建专题。"
+                  "严格只输出一个 JSON 数组，每项格式：{gap_id, topic_id, title, content}，"
+                  "title 是建议新增的学习项标题，content 是 2-4 句可执行学习要点。不要输出其他文字。")
     question = payload.get("question", "")
     return f"用户提问：{question}\n请结合专题《{name}》与用户背景回答。"
 
@@ -75,7 +85,7 @@ class handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(n).decode() or "{}")
             action = payload.get("action", "ask")
-            if action not in ("plan", "quiz", "summary", "ask"):
+            if action not in ("plan", "quiz", "summary", "ask", "triage_gaps"):
                 self._send(400, {"error": "未知 action"})
                 return
             if not DEEPSEEK_KEY:
