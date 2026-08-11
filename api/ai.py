@@ -59,7 +59,7 @@ def _action_prompt(action: str, payload: dict) -> str:
             '"answer_index":2,"explanation":"..."}],'
             '"cases":[{"topic_id":"ux","title":"...","summary":"场景/要点/取舍","question":"..."}],'
             '"mocks":[{"section":"behavioral","question":"...","checklist":["..."]}],'
-            '"topic_additions":[{"topic_id":"ux","title":"...","content":"..."}]}\n"
+            '"topic_additions":[{"topic_id":"ux","title":"...","content":"..."}]}\n'
             "规模：cards 1-2 张、quiz 3-5 题（每题 4 个选项，answer_index 为 0-3 的随机位置）、"
             "cases 1 个、mocks 2 题、topic_additions 1-2 条。内容控制在手机 5 分钟内读完。")
     question = payload.get("question", "")
