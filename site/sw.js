@@ -1,4 +1,4 @@
-const CACHE = "ai-pm-v8";
+const CACHE = "ai-pm-v9";
 const ASSETS = ["/", "/index.html", "/learn.html", "/quiz.html", "/cases.html", "/outputs.html", "/project.html", "/mock.html", "/review.html", "/topics.html", "/gaps.html", "/progress.html", "/manifest.webmanifest", "/assets/app.js", "/assets/style.css"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

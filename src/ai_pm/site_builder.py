@@ -193,6 +193,9 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     cases = _read_json(data / "content" / "case_questions.json")
     mocks = _read_json(data / "content" / "mock_questions.json")
     topics = _read_json(data / "content" / "topics.json")
+    topics_lite = [{"id": t["id"], "name": t["name"],
+                     "modules": [m["title"] for m in t.get("modules", [])]}
+                   for t in topics]
     baseline = {}
     baseline_path = data / "assessments" / "baseline.json"
     if baseline_path.exists():
@@ -213,6 +216,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         '<div style="flex:1"><h2>今日打卡</h2>'
         '<p class="muted" style="font-size:12px;margin-top:2px">完成必做任务后点一下</p></div>'
         '<button id="checkin-btn" class="btn">打卡</button></div></div>'
+        '<div id="daily-home"></div>'
         '<div class="card"><h2 id="task-head">今日任务</h2><div id="task-list"></div></div>'
         '<div class="grid2">'
         '<a class="entry" href="/learn.html"><div class="e-ico">📚</div><div class="e-title">知识卡</div>'
@@ -234,7 +238,19 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         "</div></div>"
         '<footer class="hint">AI-PM · 通勤学习助手</footer>'
     )
-    index_js = f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
+    _card_titles = []
+    for _md in sorted((data / "content" / "knowledge_cards").glob("*.md")):
+        _meta, _body = _front_matter(_md.read_text(encoding="utf-8"))
+        _card_titles.append(_card_title(_body) or _meta.get("capability_id", _md.stem))
+    existing = {
+        "cards": _card_titles,
+        "quiz": [q["question"] for q in bank],
+        "cases": [c.get("title", c["id"]) for c in cases],
+        "mocks": [m["question"] for m in mocks],
+    }
+    index_js = (f'window.PLAN_TASKS = {json.dumps(plan_tasks, ensure_ascii=False)};'
+                f"window.EXISTING = {json.dumps(existing, ensure_ascii=False)};"
+                f"window.TOPICS = {json.dumps(topics_lite, ensure_ascii=False)};")
     (out / "index.html").write_text(_page("AI-PM", "index", index_body, index_js), encoding="utf-8")
 
     # ---- learn.html（知识卡列表）----
@@ -253,6 +269,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     learn_body = (
         '<header class="top"><h1>知识卡</h1>'
         '<p class="sub">碎片时间输入 · 每张 ≤5 分钟</p></header>'
+        '<div id="daily-cards"></div>'
         '<div class="filters" id="learn-filters">'
         '<span class="chip on" data-f="all">全部</span>'
         '<span class="chip" data-f="fav">⭐ 收藏</span>'
@@ -343,6 +360,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     cases_body = (
         '<header class="top"><h1>案例拆解</h1>'
         '<p class="sub">通勤版摘要 · 5 分钟读完一个案例</p></header>'
+        '<div id="daily-cases"></div>'
         '<div class="card">' + "".join(case_links) + "</div>"
     )
     cases_js = f'window.CAPABILITY_NAMES = {cap_names};'
@@ -488,9 +506,6 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
         "</div></div>"
         '<div class="card"><h2>已整理</h2><div id="gap-done"></div></div>'
     )
-    topics_lite = [{"id": t["id"], "name": t["name"],
-                     "modules": [m["title"] for m in t.get("modules", [])]}
-                   for t in topics]
     gaps_js = "window.TOPICS = " + json.dumps(topics_lite, ensure_ascii=False) + ";"
     (out / "gaps.html").write_text(_page("我的不足点", "gaps", gaps_body, gaps_js), encoding="utf-8")
 
@@ -506,6 +521,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
     topics_body = (
         '<header class="top"><h1>主题学习</h1>'
         '<p class="sub">针对个人短板开专题 · AI 辅助计划/出题/总结</p></header>'
+        '<div id="daily-topics"></div>'
         '<div class="card" style="margin-top:12px"><div style="display:flex;align-items:center;gap:12px">'
         '<div style="flex:1"><h2>📌 我的不足点</h2>'
         '<p class="muted" style="font-size:12px">学习中随手记录，AI 自动归类到专题</p></div>'
@@ -575,7 +591,7 @@ def build_site(data_dir: str, out_dir: str, date: Optional[str] = None) -> List[
                  "/outputs.html", "/project.html", "/mock.html", "/review.html",
                  "/topics.html", "/gaps.html", "/progress.html", "/manifest.webmanifest",
                  "/assets/app.js", "/assets/style.css"]
-    sw = ("const CACHE = \"ai-pm-v8\";\n"
+    sw = ("const CACHE = \"ai-pm-v9\";\n"
           f"const ASSETS = {json.dumps(sw_assets)};\n"
           'self.addEventListener("install", e => {\n'
           "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));\n"

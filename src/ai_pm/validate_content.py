@@ -31,12 +31,18 @@ def validate_content(data_dir: str) -> List[str]:
     item_ids = {it["id"] for it in model["items"]}
     bank = json.loads((data / "content" / "question_bank.json").read_text(encoding="utf-8"))
     quiz_ids = {q["id"] for q in bank}
+    bank_answers = set()
     for q in bank:
         for field in ("id", "capability_id", "question", "options", "answer"):
             if field not in q:
                 errors.append(f"bank:{q.get('id', '?')} 缺少字段 {field}")
         if q.get("capability_id") not in item_ids:
             errors.append(f"bank:{q.get('id')} 引用了不存在的能力项 {q.get('capability_id')}")
+        if q.get("answer") not in {str(o)[0] for o in q.get("options", [])}:
+            errors.append(f"bank:{q.get('id')} answer 不在 options 中")
+        bank_answers.add(q.get("answer"))
+    if len(bank) >= 2 and len(bank_answers) < 2:
+        errors.append("bank: 正确答案分布异常（不能全部相同）")
     cards = sorted((data / "content" / "knowledge_cards").glob("*.md"))
     for card in cards:
         meta, body = _front_matter(card.read_text(encoding="utf-8"))

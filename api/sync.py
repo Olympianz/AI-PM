@@ -23,6 +23,7 @@ TABLES = {
     "bookmarks": ("ai_pm_bookmarks", "card_id"),
     "gaps": ("ai_pm_gaps", "id"),
     "topic_items": ("ai_pm_topic_items", "id"),
+    "daily_items": ("ai_pm_daily_items", "id"),
 }
 DELETE_TABLES = ("artifacts", "mocks", "gaps")
 

@@ -79,6 +79,9 @@
         return { id: String(it.id), topic_id: it.topic_id, title: it.title,
                  content: it.content, created_at: it.created_at };
       }),
+      daily_items: Object.keys(state.daily_items || {}).map(function (d) {
+        return { id: d, data: state.daily_items[d], created_at: todayISO() };
+      }),
       _delete: state._deleted || {}
     };
     return fetch("/api/sync", {
@@ -103,6 +106,7 @@
         state.bookmarks = state.bookmarks || [];
         state.gaps = state.gaps || [];
         state.topic_items = state.topic_items || [];
+        state.daily_items = state.daily_items || {};
         state._deleted = { artifacts: [], mocks: [], gaps: [] };
         (data.checkins || []).forEach(function (c) {
           if (state.checkins.indexOf(c.date) === -1) { state.checkins.push(c.date); }
@@ -142,6 +146,10 @@
         state.topic_items = (data.topic_items || []).map(function (it) {
           return { id: it.id, topic_id: it.topic_id, title: it.title,
                    content: it.content, created_at: it.created_at };
+        });
+        state.daily_items = {};
+        (data.daily_items || []).forEach(function (di) {
+          if (di && di.id) { state.daily_items[di.id] = di.data || {}; }
         });
         save(state);
         return state;
@@ -357,6 +365,7 @@
     window.QUIZ_BANK.forEach(function (q) {
       (groups[q.capability_id] = groups[q.capability_id] || []).push(q);
     });
+    var dailyQuiz = (todayDaily() || {}).quiz || [];
     Object.keys(groups).forEach(function (c) {
       var sec = document.createElement("section");
       sec.className = "quiz-group";
@@ -378,9 +387,30 @@
       });
       root.appendChild(sec);
     });
+    if (dailyQuiz.length) {
+      var dsec = document.createElement("section");
+      dsec.className = "quiz-group";
+      dsec.dataset.cap = "";
+      var dh = document.createElement("h2");
+      dh.textContent = "✨ 今日新题";
+      dsec.appendChild(dh);
+      dailyQuiz.forEach(function (q, idx) {
+        var div = document.createElement("div");
+        div.className = "card";
+        div.style.marginTop = "10px";
+        div.dataset.qid = q.id;
+        var html = "<p style=\"font-weight:620\">" + (idx + 1) + ". " + q.question + "</p>";
+        q.options.forEach(function (opt) {
+          html += '<label class="opt"><input type="radio" name="q-' + q.id + '" value="' + opt[0] + '"> ' + opt + "</label>";
+        });
+        div.innerHTML = html;
+        dsec.appendChild(div);
+      });
+      root.appendChild(dsec);
+    }
 
     submit.onclick = function () {
-      window.QUIZ_BANK.forEach(function (q) {
+      window.QUIZ_BANK.concat(dailyQuiz).forEach(function (q) {
         var card = root.querySelector('.card[data-qid="' + q.id + '"]');
         if (!card || done[q.id]) { return; }
         var sel = card.querySelector('input[name="q-' + q.id + '"]:checked');
@@ -641,7 +671,10 @@
     var section = "behavioral";
     var filters = document.getElementById("mock-filters");
     function render() {
-      var qs = window.MOCK_QUESTIONS.filter(function (q) { return q.section === section; });
+      var dailyMocks = (todayDaily() || {}).mocks || [];
+      var qs = window.MOCK_QUESTIONS
+        .filter(function (q) { return q.section === section; })
+        .concat(dailyMocks.filter(function (q) { return q.section === section; }));
       root.innerHTML = qs.map(function (q, idx) {
         return '<div class="card" data-qid="' + q.id + '" style="margin-top:12px">' +
           "<h2>Q" + (idx + 1) + "</h2>" +
@@ -1239,6 +1272,161 @@
       '<p class="muted" style="padding:8px 0">暂无补充学习项 —— 记录不足点后让 AI 归类到这里</p>';
   }
 
+  function todayDaily() {
+    var state = load();
+    state.daily_items = state.daily_items || {};
+    return state.daily_items[todayISO()] || null;
+  }
+
+  function shuffleQuiz(q) {
+    var correct = q.options[q.answer_index];
+    var arr = q.options.slice();
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    var letters = ["A", "B", "C", "D"];
+    return { options: arr, answer: letters[arr.indexOf(correct)] };
+  }
+
+  function wrongAnswers() {
+    var state = load();
+    state.quiz_answers = state.quiz_answers || [];
+    var map = {};
+    (window.QUIZ_BANK || []).forEach(function (q) { map[q.id] = q; });
+    var daily = todayDaily();
+    ((daily && daily.quiz) || []).forEach(function (q) { if (q.id) { map[q.id] = q; } });
+    var out = [];
+    state.quiz_answers.forEach(function (a) {
+      var q = map[a.quiz_id];
+      if (q && q.answer && a.choice && a.choice !== q.answer) {
+        out.push({ question: q.question, your_answer: a.choice, correct_answer: q.answer });
+      }
+    });
+    return out.slice(0, 10);
+  }
+
+  function generateDaily(date) {
+    var box = document.getElementById("daily-home");
+    if (box) {
+      box.innerHTML = '<div class="card"><p class="muted" style="font-size:13px">🤖 正在生成今日内容（约 30 秒）…</p></div>';
+    }
+    aiCall("daily_content", "", {
+      date: date,
+      existing: window.EXISTING || {},
+      wrong_answers: wrongAnswers(),
+      topics: window.TOPICS || []
+    }).then(function (text) {
+      var parsed = parseJson(text);
+      if (!parsed || typeof parsed !== "object") { throw new Error("AI 输出格式不对"); }
+      var state = load();
+      state.daily_items = state.daily_items || {};
+      (parsed.quiz || []).forEach(function (q, i) {
+        q.id = "daily-" + date + "-" + i;
+        if (q.options && typeof q.answer_index === "number") {
+          var res = shuffleQuiz(q);
+          q.options = res.options;
+          q.answer = res.answer;
+          delete q.answer_index;
+        }
+      });
+      (parsed.mocks || []).forEach(function (m, i) {
+        m.id = "daily-" + date + "-m" + i;
+      });
+      state.daily_items[date] = parsed;
+      save(state);
+      queueSync();
+      try { localStorage.setItem("ai-pm-daily-gen-" + date, "1"); } catch (e) {}
+      renderDailyAll();
+      alert("今日内容已生成：新卡 " + ((parsed.cards || []).length) +
+            "、新题 " + ((parsed.quiz || []).length) + "、案例 " + ((parsed.cases || []).length));
+    }).catch(function (e) {
+      if (box) {
+        box.innerHTML = '<div class="card"><div style="display:flex;align-items:center;gap:10px">' +
+          '<div style="flex:1"><h2>📅 今日 AI 内容</h2>' +
+          '<p class="muted" style="font-size:12px">生成失败：' + escapeHtml(e.message) + "</p></div>" +
+          '<button id="gen-daily" class="btn" style="font-size:12px">重试</button></div></div>';
+      }
+      var b = document.getElementById("gen-daily");
+      if (b) { b.onclick = function () { generateDaily(date); }; }
+    });
+  }
+
+  function renderDailyHome() {
+    var box = document.getElementById("daily-home");
+    if (!box) { return; }
+    var today = todayISO();
+    var daily = todayDaily();
+    if (daily && (daily.cards || daily.quiz || daily.cases || daily.mocks || daily.topic_additions)) {
+      var c = (daily.cards || []).length, q = (daily.quiz || []).length,
+          cs = (daily.cases || []).length, m = (daily.mocks || []).length,
+          t = (daily.topic_additions || []).length;
+      box.innerHTML = '<div class="card"><div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="flex:1"><h2>📅 今日 AI 内容</h2>' +
+        '<p class="muted" style="font-size:12px">新卡 ' + c + " · 新题 " + q + " · 案例 " + cs +
+        " · 面试 " + m + " · 专题 " + t + "</p></div>" +
+        '<a class="btn ghost" href="/learn.html" style="font-size:12px">去学习</a></div></div>';
+      return;
+    }
+    var flag = null;
+    try { flag = localStorage.getItem("ai-pm-daily-gen-" + today); } catch (e) {}
+    if (!flag) {
+      generateDaily(today);
+      return;
+    }
+    box.innerHTML = '<div class="card"><div style="display:flex;align-items:center;gap:10px">' +
+      '<div style="flex:1"><h2>📅 今日 AI 内容</h2>' +
+      '<p class="muted" style="font-size:12px">还没有今日内容，点按钮生成（基于错题拓展、避免重复）</p></div>' +
+      '<button id="gen-daily" class="btn" style="font-size:12px">生成</button></div></div>';
+    var b = document.getElementById("gen-daily");
+    if (b) { b.onclick = function () { generateDaily(today); }; }
+  }
+
+  function renderDailyCards() {
+    var box = document.getElementById("daily-cards");
+    if (!box) { return; }
+    var cards = (todayDaily() || {}).cards || [];
+    if (!cards.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="card"><h2>📅 今日新卡</h2>' + cards.map(function (c) {
+      return '<div class="task"><span class="t-ico">✨</span>' +
+        '<span class="t-main"><span class="t-title">' + escapeHtml(c.title) + "</span>" +
+        '<span class="t-meta">' + escapeHtml((c.content || "").slice(0, 70)) + "</span></span></div>";
+    }).join("") + "</div>";
+  }
+
+  function renderDailyCases() {
+    var box = document.getElementById("daily-cases");
+    if (!box) { return; }
+    var cases = (todayDaily() || {}).cases || [];
+    if (!cases.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="card"><h2>📅 今日案例</h2>' + cases.map(function (c) {
+      return '<div class="task"><span class="t-ico">✨</span>' +
+        '<span class="t-main"><span class="t-title">' + escapeHtml(c.title) + "</span>" +
+        '<span class="t-meta">' + escapeHtml((c.summary || "").slice(0, 70)) + "</span></span></div>";
+    }).join("") + "</div>";
+  }
+
+  function renderDailyTopics() {
+    var box = document.getElementById("daily-topics");
+    if (!box) { return; }
+    var adds = (todayDaily() || {}).topic_additions || [];
+    if (!adds.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="card"><h2>📅 今日专题要点</h2>' + adds.map(function (a) {
+      return '<div class="task"><span class="t-ico">🎯</span>' +
+        '<span class="t-main"><span class="t-title">' + escapeHtml(a.title) + "</span>" +
+        '<span class="t-meta">' + escapeHtml((a.content || "").slice(0, 70)) + "</span></span></div>";
+    }).join("") + "</div>";
+  }
+
+  function renderDailyAll() {
+    renderDailyHome();
+    renderDailyCards();
+    renderDailyCases();
+    renderDailyTopics();
+    renderQuiz();
+    renderMock();
+  }
+
   var exp = document.getElementById("export-sync");
   if (exp) { exp.onclick = exportSync; }
   function renderAll() {
@@ -1257,6 +1445,10 @@
     renderGapCapture();
     renderGaps();
     renderTopicItems();
+    renderDailyHome();
+    renderDailyCards();
+    renderDailyCases();
+    renderDailyTopics();
   }
   renderAll();
   markCardRead();

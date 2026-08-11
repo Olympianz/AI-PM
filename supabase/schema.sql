@@ -71,3 +71,9 @@ create table if not exists public.ai_pm_topic_items (
   content    text not null,
   created_at text not null
 );
+
+create table if not exists public.ai_pm_daily_items (
+  id         text primary key,
+  data       jsonb not null default '{}'::jsonb,
+  created_at text not null
+);

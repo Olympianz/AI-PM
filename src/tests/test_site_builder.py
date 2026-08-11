@@ -67,6 +67,7 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "2026-08-10" in index
     assert "2026-08-10-input" in index
     assert "/learn.html" in index
+    assert 'id="daily-home"' in index
     quiz = (out / "quiz.html").read_text(encoding="utf-8")
     assert "q-001" in quiz
     assert 'data-cap="A2"' in quiz
@@ -78,6 +79,11 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     assert "cards/A2.html" in learn
     assert 'id="learn-filters"' in learn
     assert 'data-card="A2"' in learn
+    assert 'id="daily-cards"' in learn
+    cases_page = (out / "cases.html").read_text(encoding="utf-8")
+    assert 'id="daily-cases"' in cases_page
+    topics_page_html = (out / "topics.html").read_text(encoding="utf-8")
+    assert 'id="daily-topics"' in topics_page_html
     card_page = (out / "cards" / "A2.html").read_text(encoding="utf-8")
     assert 'id="card-nav"' in card_page
     assert "CARD_PLAN" in card_page
@@ -100,5 +106,5 @@ def test_build_site_writes_all_pwa_files(tmp_path):
     manifest = json.loads((out / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert manifest["name"] == "AI-PM"
     sw = (out / "sw.js").read_text(encoding="utf-8")
-    assert "ai-pm-v8" in sw
+    assert "ai-pm-v9" in sw
     assert "learn.html" in sw
